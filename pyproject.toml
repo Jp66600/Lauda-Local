@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vellum"
+version = "0.9.0b1"
+description = "Extracao 100% local de informacao de arquivos de audio e video (metadados, transcricao, diagnostico)."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Vellum" }]
+keywords = ["whisper", "transcription", "ffmpeg", "offline", "speech-to-text"]
+
+dependencies = [
+    "faster-whisper>=1.2,<2",
+    "ctranslate2>=4.5,<5",
+    "huggingface-hub>=0.34,<2",
+    "typer>=0.15,<1",
+    "rich>=13,<16",
+    "python-dotenv>=1.0,<2",
+]
+
+[project.optional-dependencies]
+ui = ["gradio>=5,<7"]
+# Janela nativa: Pillow suaviza os cantos arredondados e o tkinterdnd2 liga o
+# arrastar-e-soltar. Sem eles o aplicativo abre igual, só um pouco mais cru.
+desktop = ["pillow>=10", "tkinterdnd2>=0.4"]
+diarize = ["torch>=2.2", "torchaudio>=2.2", "speechbrain>=1.0,<2"]
+pyannote = ["torch>=2.2", "torchaudio>=2.2", "pyannote.audio>=3.3,<4"]
+gpu = ["nvidia-cublas-cu12>=12.3", "nvidia-cudnn-cu12>=9.1,<10"]
+dev = ["pytest>=8", "mypy>=1.10", "ruff>=0.6"]
+# Ferramentas de documentacao: geram o icone e o manual em PDF.
+docs = ["reportlab>=4.1", "pypdf>=5", "pypdfium2>=4", "pillow>=10"]
+
+[project.scripts]
+vellum = "vellum.cli:main"
+
+# gui-scripts gera um .exe SEM janela de console: e o aplicativo de verdade.
+[project.gui-scripts]
+vellum-app = "vellum.desktop:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vellum = ["resources/stopwords/*.txt", "resources/icons/*.png"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# Curado: erros reais, seguranca (S), bugs provaveis (B), modernizacao (UP),
+# simplificacao (SIM) e imports (I). Fora: regras de estilo que brigam com o
+# formato das tabelas de dados deste projeto.
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "S", "C4", "PIE", "T20"]
+ignore = [
+    "E501",    # comprimento de linha: ja controlado pelo formatador
+    "ISC001", "ISC003",
+    "RUF001", "RUF002", "RUF003",  # acentuacao e travessao em texto PT-BR
+    "S603",    # subprocess com lista de args: e exatamente o que queremos
+    "S607",    # caminho parcial de executavel: resolvido por resolve_tools()
+    "SIM105",  # contextlib.suppress nem sempre e mais legivel
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Caminhos "/tmp/..." nos testes sao dados fixos de exemplo, nao arquivos reais.
+# C408/UP031/RUF012 sao legibilidade em dublês de teste.
+# S105/S106: os "tokens" nos testes sao falsos de proposito — o teste existe
+# justamente para provar que um token nao vaza para disco.
+"tests/*" = ["S101", "S404", "S311", "S108", "S105", "S106", "C408", "UP031", "RUF012"]
+# S310: todas as chamadas passam por `_safe_url`, que recusa esquemas que nao
+# sejam http/https — a validacao existe, o ruff so nao a enxerga.
+"src/vellum/summarize.py" = ["S310"]
+"scripts/*" = ["T201", "S404", "S603"]      # scripts de linha de comando imprimem
+"src/vellum/cli.py" = ["B008"]          # typer.Option em default e a API do Typer
+"src/vellum/ui.py" = ["B008"]           # gr.Progress() em default e a API do Gradio
+
+[tool.mypy]
+# 3.12 e a versao que o projeto realmente roda; com 3.11 o mypy nem consegue
+# ler os stubs do numpy (usam `type` statement).
+python_version = "3.12"
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = true

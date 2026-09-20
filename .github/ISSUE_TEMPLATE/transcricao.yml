@@ -1,0 +1,70 @@
+name: A transcrição saiu ruim
+description: O programa terminou, mas o texto está errado, incompleto ou fora de hora.
+labels: ["qualidade"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Este é o relato mais útil do projeto — e o mais difícil de investigar sem
+        números. O laudo tem quase todos eles.
+
+        Uma issue é pública: não cole trechos da transcrição que sejam privados.
+
+  - type: dropdown
+    id: sintoma
+    attributes:
+      label: O que está errado
+      options:
+        - Faltou texto (trechos inteiros sem transcrever)
+        - As palavras estão erradas
+        - Inventou frases que ninguém falou
+        - A legenda está fora de sincronia
+        - Quem fala está trocado
+        - Outro
+    validations:
+      required: true
+
+  - type: input
+    id: cobertura
+    attributes:
+      label: Cobertura
+      description: >
+        No laudo, seção 5, **BLOCO A2**: a linha `Transcrito`. Se houver trechos
+        listados em `Sem texto`, cole-os também.
+      placeholder: "77.8% do arquivo — Sem texto: 00:12:40 → 00:15:02"
+
+  - type: input
+    id: qualidade
+    attributes:
+      label: Qualidade e device
+      description: No laudo, na seção 1 — as linhas `Modelo` e `Device`.
+      placeholder: "large-v3-turbo em cuda (RTX 3050)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: arquivo
+    attributes:
+      label: Como é o áudio
+      description: >
+        Duração, idioma, quantas pessoas falam, se tem música, ruído, sotaque
+        forte, gravação por celular, chamada de vídeo.
+      placeholder: "Reunião de 1h10, português, quatro pessoas, gravada pelo Meet."
+    validations:
+      required: true
+
+  - type: textarea
+    id: exemplo
+    attributes:
+      label: Um exemplo concreto
+      description: O minuto em que dá para ouvir o erro, e o que foi dito de verdade.
+      placeholder: "Aos 08:14 ela diz 'prazo de entrega' e saiu 'prazo de entrevista'."
+
+  - type: checkboxes
+    id: testou
+    attributes:
+      label: Já tentou
+      options:
+        - label: Forçar o idioma em vez de deixar em "Detectar automaticamente"
+        - label: Subir a qualidade
+        - label: Rodar de novo com "Transcrever em lotes" desligado

@@ -1,0 +1,47 @@
+VELLUM — versão de teste
+
+Obrigado por experimentar. Quatro coisas que vale saber antes de continuar:
+
+
+1. O WINDOWS VAI RECLAMAR. É NORMAL.
+
+   Este instalador não tem assinatura digital (ela custa algumas centenas de
+   dólares por ano e isto aqui é um teste entre amigos). O Windows mostra uma
+   tela azul dizendo "O Windows protegeu o computador".
+
+   Clique em "Mais informações" e depois em "Executar assim mesmo".
+
+   Se preferir conferir antes, mande o arquivo para virustotal.com — leva um
+   minuto e mostra o que os antivírus acham dele.
+
+
+2. A PRIMEIRA TRANSCRIÇÃO PRECISA DE INTERNET.
+
+   O modelo que faz a transcrição tem uns 500 MB e é baixado na primeira vez
+   que você processa um arquivo. Depois disso ele fica guardado no seu
+   computador e o programa funciona sem internet para sempre.
+
+   Nada do seu áudio ou vídeo sai da sua máquina, nem na primeira vez.
+
+
+3. ELE JÁ SE CHAMOU "MEDIAINTEL LOCAL".
+
+   Se você testou aquela versão, este instalador remove a antiga sozinho antes
+   de instalar — para não ficarem dois programas na lista. Suas escolhas (tema,
+   opções, limites) e o histórico são copiados para a pasta nova na primeira
+   vez que o Vellum abrir.
+
+   A pasta antiga (C:\Users\<você>\.mediaintel) é mantida como está. Se tudo
+   funcionar, você pode apagá-la quando quiser.
+
+
+4. ELE VAI OLHAR O SEU COMPUTADOR AO ABRIR.
+
+   Processador, memória, placa de vídeo e espaço em disco — para avisar se o
+   trabalho vai demorar demais. Se a máquina for fraca, ele diz isso na cara e
+   deixa você escolher entre fechar e continuar assim mesmo.
+
+
+O que ocupa espaço: o programa em si tem cerca de 700 MB e os modelos baixados,
+de 0,5 a 3 GB, ficam em C:\Users\<você>\.vellum — fora da pasta do programa,
+então desinstalar não apaga nem obriga a baixar de novo.

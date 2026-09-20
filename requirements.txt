@@ -1,0 +1,11 @@
+# MediaIntel Local - dependencias fixas (reprodutivel)
+# Python 3.12 recomendado (3.11-3.13 suportado). Nao use 3.14: sem wheels de ctranslate2.
+faster-whisper==1.2.1
+ctranslate2==4.8.2
+huggingface-hub>=0.34,<2
+typer==0.27.2
+rich==15.0.0
+python-dotenv==1.2.3
+
+# --- dev / testes ---
+pytest==9.1.1

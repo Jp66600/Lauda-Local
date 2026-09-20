@@ -1,0 +1,36 @@
+# Ambientes virtuais
+.venv/
+.venv-build/
+
+# Empacotamento (o instalador é gerado, não versionado)
+build/
+dist/
+build-tools/
+*.spec.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Saídas e dados locais
+saida/
+models/
+*.log
+.env
+
+# Mídia de teste: é gerada por `python scripts/make_test_media.py`,
+# não faz sentido carregar megabytes de áudio no repositório.
+tests/_media/
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Capturas de tela: as atuais sao da v0.6.0 e nao batem mais com o app.
+# Gere as suas antes de usar no README.
+docs/tela-*.png

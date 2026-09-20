@@ -1,0 +1,6 @@
+# Bibliotecas CUDA via pip (Windows/Linux) para ctranslate2 4.x.
+# Use SOMENTE se voce tem GPU NVIDIA e nao quer instalar o CUDA Toolkit completo.
+#   pip install -r requirements-gpu.txt
+# ctranslate2 4.x exige cuDNN 9 + cuBLAS (CUDA 12).
+nvidia-cublas-cu12>=12.3
+nvidia-cudnn-cu12>=9.1,<10

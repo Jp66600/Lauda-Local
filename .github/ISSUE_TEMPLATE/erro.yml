@@ -1,0 +1,78 @@
+name: Relatar um erro
+description: Algo falhou, travou ou saiu diferente do esperado.
+labels: ["erro"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Uma issue é pública. **Não cole nada que você não queira que o mundo
+        leia** — inclusive trechos da transcrição.
+
+  - type: textarea
+    id: o-que-aconteceu
+    attributes:
+      label: O que aconteceu
+      description: E o que você esperava que acontecesse.
+      placeholder: |
+        Cliquei em Processar num MP4 de 40 minutos e depois de uns 3 minutos
+        apareceu "Não deu certo". Esperava o laudo.
+    validations:
+      required: true
+
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como repetir
+      placeholder: |
+        1. Abri o Vellum
+        2. Arrastei o arquivo
+        3. Liguei "Diarização de falantes"
+        4. Cliquei em Processar
+    validations:
+      required: true
+
+  - type: input
+    id: versao
+    attributes:
+      label: Versão
+      description: Está no alto de qualquer laudo, na linha `Aplicação`.
+      placeholder: "0.9.0-beta"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: como-instalou
+    attributes:
+      label: Como você instalou
+      options:
+        - Instalador (.exe)
+        - Do código-fonte (pip install -e .)
+        - Outro
+    validations:
+      required: true
+
+  - type: textarea
+    id: arquivo
+    attributes:
+      label: O arquivo de mídia
+      description: >
+        Se não puder compartilhar, descreva: duração, idioma, se é áudio ou
+        vídeo, se tem música ou ruído de fundo, quantas pessoas falam.
+      placeholder: "MP4 de 42 min, português, duas pessoas, com música baixa ao fundo."
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: >
+        `~/.vellum/logs/vellum.log` e `vellum-worker.log` (no Windows,
+        `C:\Users\<você>\.vellum\logs`). Cole as últimas linhas ou anexe os
+        arquivos.
+      render: text
+
+  - type: textarea
+    id: maquina
+    attributes:
+      label: Diagnóstico da máquina
+      description: Página **Desempenho** → aba **Diagnóstico**.
+      placeholder: "16 threads, 16 GB de RAM, RTX 3050 (4 GB), ffmpeg instalado"

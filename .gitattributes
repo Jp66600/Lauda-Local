@@ -1,0 +1,17 @@
+# Normaliza as quebras de linha: LF no repositório, nativo na cópia de trabalho.
+* text=auto eol=lf
+
+# Estes só funcionam com CRLF no Windows.
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+*.iss  text eol=crlf
+
+# Binários: nunca converter.
+*.png  binary
+*.ico  binary
+*.pdf  binary
+*.wav  binary
+*.mp4  binary
+
+# Os PDFs gerados sujam o diff; o que importa é o script que os gera.
+docs/*.pdf linguist-generated=true

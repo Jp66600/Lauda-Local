@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Falha de segurança
+    url: https://github.com/Jp66600/vellum/security/advisories/new
+    about: Não abra issue pública. Use o relato privado.
+  - name: Como instalar e usar
+    url: https://github.com/Jp66600/vellum/blob/main/docs/Vellum-Manual.pdf
+    about: O manual cobre cada tela, cada opção e o que fazer quando dá errado.
+  - name: Dúvida ou conversa
+    url: https://github.com/Jp66600/vellum/discussions
+    about: Para perguntas abertas, antes de virar issue.

@@ -1,0 +1,110 @@
+VELLUM — versão de teste 0.9.0-beta
+==================================
+
+O que é
+-------
+Transforma qualquer áudio ou vídeo num relatório de texto: metadados do
+arquivo, qualidade do áudio, idioma, transcrição com marcação de tempo e, se
+você quiser, quem falou o quê e legendas .srt/.vtt.
+
+Tudo acontece no seu computador. Nenhum byte do seu arquivo é enviado para
+lugar nenhum, e não há nenhuma conta ou API paga envolvida.
+
+Este programa se chamava MediaIntel Local. Só o nome mudou: se você testou a
+versão anterior, suas escolhas e seu histórico vêm junto na primeira abertura,
+e a pasta antiga continua onde estava.
+
+
+Como usar
+---------
+1. Abra o programa e vá em "Novo trabalho".
+2. Arraste o áudio ou vídeo para a área pontilhada (ou clique nela).
+3. Confira a pasta de saída, no canto de baixo do painel da direita.
+4. Ligue o que quiser: identificar quem fala, legendas, tempo por palavra.
+5. Clique em Processar e acompanhe a trilha de etapas no rodapé.
+
+O relatório aparece na página "Relatório" e os arquivos ficam salvos na pasta
+que você escolheu.
+
+
+Vários arquivos de uma vez
+--------------------------
+Pode soltar (ou marcar no explorador) quantos arquivos quiser: o primeiro vai
+para o cartão e o resto entra numa fila, logo abaixo. Eles rodam um por vez, de
+propósito — dois de uma vez brigariam pela mesma memória e travariam a máquina.
+Dá para soltar mais arquivos com um trabalho em andamento; eles vão para o fim
+da fila. "Esvaziar a fila" descarta quem ainda não começou.
+
+Se um arquivo der erro no meio da fila, os outros continuam.
+
+A fila inteira usa as opções de quando você clicou em Processar. Mexer num
+interruptor no meio não muda os arquivos que ainda estão esperando.
+
+
+A página "Arquivos"
+-------------------
+Guarda o histórico de tudo que você já processou: quando, duração, qualidade,
+se rodou na CPU ou na GPU, velocidade, cobertura, avisos e a confiança da
+transcrição. No fim vem "O que merece um olhar" — os trabalhos que falharam ou
+que cobriram menos de 95% do arquivo.
+
+A "cobertura" é quanto do arquivo virou texto de fato. Silêncio não conta como
+falta. Se aparecer um número baixo aí, é exatamente o tipo de coisa que eu
+quero saber.
+
+
+Se algo der errado
+------------------
+Existem dois arquivos de log em:
+
+    C:\Users\<seu usuário>\.vellum\logs\
+
+    vellum.log          o aplicativo
+    vellum-worker.log   o processamento em si
+
+Se algo falhar, me mande os dois junto com a descrição — sem eles fica
+difícil descobrir o motivo. Durante o trabalho, a página Relatório também
+mostra ao vivo o que está acontecendo.
+
+Na página "Desempenho" tem o botão "Ver o diagnóstico", que mostra o que o
+programa achou do seu computador. Vale mandar junto.
+
+
+Legendas do tamanho que você quer
+---------------------------------
+Embaixo dos interruptores de legenda tem "Tamanho das legendas":
+
+    Curtas (1-2 s)        para edição fina e karaokê. Ficam bem melhores
+                          com "marcar o tempo das palavras" ligado.
+    Equilibrada (5-8 s)   o padrão, e o que se espera de uma legenda.
+    Blocos longos         até 1 min por legenda, para quem quer o texto
+                          corrido dentro do player.
+
+Nenhum dos três inventa nem perde texto: eles só mudam onde a legenda entra e
+sai. E nenhum deixa legenda na tela durante uma pausa longa.
+
+
+Está lento?
+-----------
+Página "Desempenho", aba "Resumo": quatro opções prontas — Leve, Equilibrado,
+Rápido e Máximo. "Leve" devolve o computador para você usar enquanto ele
+trabalha; "Máximo" usa tudo e deixa a máquina pesada. Embaixo, o programa
+escreve o que aquilo significa: onde a transcrição vai rodar e com qual modelo.
+
+Se o trabalho pedir mais memória do que a opção escolhida libera, ele avisa ali
+mesmo que o modelo vai ser rebaixado — antes de você esperar.
+
+Quem quiser afinar, a aba "Limites" tem os quatro controles separados. Em
+"Qualidade", na página do trabalho, "Rascunho" é bem mais rápido que
+"Recomendado" — bom para testar antes de rodar um arquivo longo.
+
+Quem tem placa de vídeo NVIDIA pode acelerar bastante, mas o suporte a GPU não
+vem neste pacote (ele dobraria de tamanho). Me avise se quiser essa versão.
+
+
+O que eu gostaria de saber de você
+----------------------------------
+- A transcrição ficou boa? Onde ela errou feio?
+- Alguma coisa na tela ficou confusa ou escondida demais?
+- Quanto tempo levou, e em que computador?
+- O que faltou para você usar isso de verdade?

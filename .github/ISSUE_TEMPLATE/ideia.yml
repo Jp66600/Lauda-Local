@@ -1,0 +1,40 @@
+name: Sugerir uma mudança
+description: Um recurso novo, uma tela confusa, uma palavra mal escolhida.
+labels: ["ideia"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qual é o problema
+      description: >
+        Comece pelo incômodo, não pela solução. O que você estava tentando fazer
+        quando tropeçou nisso?
+      placeholder: >
+        Processo dez arquivos por semana e preciso lembrar de mudar a pasta de
+        saída toda vez, senão eles se misturam.
+    validations:
+      required: true
+
+  - type: textarea
+    id: ideia
+    attributes:
+      label: O que você faria
+      description: Se já tiver uma ideia de solução. Tudo bem não ter.
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Como você resolve hoje
+      placeholder: "Mudo na mão, e umas duas vezes por mês esqueço."
+
+  - type: markdown
+    attributes:
+      value: |
+        **Três coisas que o projeto não vai fazer**, para poupar seu tempo:
+
+        - Enviar seu arquivo para qualquer serviço na nuvem, ou usar API paga.
+        - Virar uma aplicação web. A interface é uma janela nativa em Tkinter, de
+          propósito.
+        - Coletar telemetria de uso.
+
+        O porquê de cada uma está em `docs/Vellum-Decisoes-Tecnicas.pdf`.

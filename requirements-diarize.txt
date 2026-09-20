@@ -1,0 +1,13 @@
+# FASE 3 (opcional): diarizacao de falantes.
+# Instale so quando for usar: puxa PyTorch (centenas de MB).
+#   pip install -r requirements-diarize.txt
+#
+# Dois backends, escolhidos automaticamente (--diarize-backend):
+#   ecapa    -> speechbrain, SEM token do Hugging Face  (padrao pratico)
+#   pyannote -> melhor qualidade, mas exige HF_TOKEN + aceite dos termos
+torch>=2.2
+torchaudio>=2.2
+speechbrain>=1.0,<2
+
+# Backend pyannote (opcional; modelos "gated" no Hugging Face)
+# pyannote.audio>=3.3,<4

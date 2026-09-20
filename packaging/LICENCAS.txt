@@ -1,0 +1,55 @@
+VELLUM — LICENÇAS
+===========================
+
+O aplicativo
+------------
+Vellum é distribuído sob a licença MIT.
+
+    Permissão é concedida, gratuitamente, a qualquer pessoa que obtenha uma
+    cópia deste software e dos arquivos de documentação associados, para lidar
+    com o software sem restrição, incluindo usar, copiar, modificar, mesclar,
+    publicar, distribuir, sublicenciar e/ou vender cópias, desde que o aviso de
+    direitos autorais e esta permissão sejam incluídos em todas as cópias.
+
+    O SOFTWARE É FORNECIDO "COMO ESTÁ", SEM GARANTIA DE QUALQUER TIPO.
+
+
+FFmpeg
+------
+Este pacote inclui binários do FFmpeg (ffmpeg.exe, ffprobe.exe e as bibliotecas
+av*/sw* que os acompanham), usados para ler os arquivos de mídia e extrair o
+áudio.
+
+Estes binários são de uma compilação **LGPL v3** — sem os componentes que são
+GPL (x264, x265 e afins). Foi essa a razão da escolha: a LGPL permite distribuir
+os binários ao lado de um aplicativo com outra licença, desde que:
+
+  * este aviso acompanhe a distribuição;
+  * o código-fonte do FFmpeg esteja disponível — está em https://ffmpeg.org/
+    e as compilações usadas vêm de https://github.com/BtbN/FFmpeg-Builds ;
+  * seja possível substituir as bibliotecas por outra versão. Como elas são
+    arquivos separados dentro da pasta do aplicativo, basta trocá-las.
+
+FFmpeg é marca registrada de Fabrice Bellard, criador do projeto.
+Texto completo da LGPL v3: https://www.gnu.org/licenses/lgpl-3.0.html
+
+
+Modelos de transcrição
+----------------------
+Os modelos Whisper (Systran/faster-whisper-*) são distribuídos sob licença MIT
+pela OpenAI/Systran. Eles NÃO vêm neste pacote: são baixados na primeira
+execução, uma vez, e reutilizados sem internet daí em diante.
+
+O modelo de detecção de voz (Silero VAD) é MIT.
+O modelo de identificação de falantes (SpeechBrain ECAPA-TDNN) é Apache 2.0.
+
+
+Bibliotecas
+-----------
+faster-whisper (MIT), CTranslate2 (MIT), PyTorch (BSD-3), torchaudio (BSD-2),
+SpeechBrain (Apache 2.0), ONNX Runtime (MIT), PyAV (BSD-3), NumPy (BSD-3),
+SciPy (BSD-3), Pillow (MIT-CMU), tkinterdnd2 (MIT), tkdnd (BSD),
+huggingface-hub (Apache 2.0), Typer (MIT), Rich (MIT), python-dotenv (BSD-3).
+
+Cada uma mantém a sua própria licença; os textos completos acompanham os
+respectivos pacotes dentro da pasta `_internal`.
