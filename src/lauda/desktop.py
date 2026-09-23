@@ -79,6 +79,7 @@ from .widgets import (
     RoundedTabs,
     SideNav,
     Stepper,
+    TabButton,
     ToggleSwitch,
     draw_icon,
     mix,
@@ -244,6 +245,11 @@ BOM SABER
 #: guarda tudo; aqui é só o que a pessoa consegue rolar sem a janela engasgar.
 LOG_VIEW_LINES = 2000
 
+#: Quantas abas de transcricao a pagina mostra. Tres por linha, duas linhas:
+#: mais que isso empurra o texto para fora da tela, e a pagina Arquivos ja tem
+#: a lista completa.
+TRANSCRIPT_TABS = 6
+
 
 class QueueLogHandler(logging.Handler):
     """Leva as linhas de log para a fila da interface.
@@ -314,6 +320,7 @@ class LaudaApp:
         self._job_started: float | None = None
         self._eta_seconds: float | None = None
         self._last_job_block = ""
+        self._transcript_current: str | None = None
 
         # Fila serial: o que espera a vez. Um trabalho por vez, sempre — dois
         # modelos de transcrição ao mesmo tempo brigam pela mesma memória.
@@ -583,7 +590,7 @@ class LaudaApp:
 
         self._build_job_page()
         self.tab_report, self.text_report = self._text_page("Relatório", "doc", actions=True)
-        self.tab_plain, self.text_plain = self._text_page("Transcrição", "transcript")
+        self._build_plain_page()
         self._build_files_page()
         self._build_limits_page()
         self._build_help_page()
@@ -593,7 +600,7 @@ class LaudaApp:
         self._refresh_prefs_summary()
         self._set_text(self.text_help, STEPS_TEXT)
         self._set_text(self.text_report, "O relatório aparece aqui depois de processar.")
-        self._set_text(self.text_plain, "O texto corrido aparece aqui depois de processar.")
+        self._refresh_transcript_tabs()
         self._refresh_files_page()
         self.nav.select(self.tab_job)
 
@@ -1142,6 +1149,193 @@ class LaudaApp:
             self._build_actions(card.body)
         self.nav.add(card, title, icon)
         return card, texto  # type: ignore[return-value]
+
+    # -------------------------------------------------------- Transcrição --
+    def _build_plain_page(self) -> None:
+        """Página "Transcrição": uma aba por arquivo já transcrito.
+
+        Antes ela mostrava só o último trabalho. Com uma fila de cinco
+        arquivos, os quatro primeiros ficavam invisíveis — só indo na pasta de
+        saída — e a página não dizia sequer de qual arquivo era o texto na
+        tela.
+        """
+        card = RoundedCard(self.content, padding=12, radius=16)
+        self._cards.append(card)
+        self.tab_plain = card
+
+        self.transcript_tabs = tk.Frame(card.body, background=self.theme.paper)
+        self.transcript_tabs.pack(fill="x", pady=(0, 8))
+        self._panels.append(self.transcript_tabs)
+        self.transcript_buttons: dict[str, TabButton] = {}
+
+        self.transcript_label = ttk.Label(
+            card.body, text="", style="Hint.TLabel", justify="left", wraplength=760
+        )
+        self.transcript_label.pack(fill="x", pady=(0, 8))
+
+        _, self.text_plain = self._text_area(card.body)
+
+        fileira = tk.Frame(card.body, background=self.theme.paper)
+        fileira.pack(fill="x", pady=(10, 2))
+        self._panels.append(fileira)
+
+        self.button_transcript_folder = RoundedButton(
+            fileira, text="Abrir o local do arquivo",
+            command=self.open_transcript_folder, font=self.font_body, icon="folder",
+        )
+        self.button_transcript_folder.pack(side="left")
+        self.button_transcript_copy = RoundedButton(
+            fileira, text="Copiar o texto", command=self.copy_transcript,
+            font=self.font_body,
+        )
+        self.button_transcript_copy.pack(side="left", padx=(10, 0))
+        self.button_transcript_report = RoundedButton(
+            fileira, text="Abrir o laudo deste arquivo",
+            command=self.open_transcript_report, font=self.font_body, icon="doc",
+        )
+        self.button_transcript_report.pack(side="left", padx=(10, 0))
+        self._buttons += [
+            self.button_transcript_folder,
+            self.button_transcript_copy,
+            self.button_transcript_report,
+        ]
+
+        self.nav.add(card, "Transcrição", "transcript")
+
+    def _transcript_entries(self) -> list[history.HistoryEntry]:
+        """Os trabalhos com texto corrido ainda em disco, do mais novo ao mais velho.
+
+        Arquivo apagado ou pasta movida some da lista: aba que abre o vazio é
+        pior que aba nenhuma.
+        """
+        vistos: set[str] = set()
+        entradas: list[history.HistoryEntry] = []
+        for entrada in reversed(history.load()):
+            caminho = entrada.transcript_path
+            if not caminho or caminho in vistos:
+                continue
+            if not Path(caminho).exists():
+                continue
+            vistos.add(caminho)
+            entradas.append(entrada)
+            if len(entradas) >= TRANSCRIPT_TABS:
+                break
+        return entradas
+
+    def _refresh_transcript_tabs(self, selecionar: str | None = None) -> None:
+        """Redesenha as abas. `selecionar` é o caminho do texto a mostrar."""
+        if not hasattr(self, "transcript_tabs"):
+            return
+        for filho in self.transcript_tabs.winfo_children():
+            filho.destroy()
+        self.transcript_buttons.clear()
+
+        entradas = self._transcript_entries()
+        if not entradas:
+            self._transcript_current = None
+            self._set_text(
+                self.text_plain,
+                "O texto corrido aparece aqui depois de processar.\n\n"
+                "Cada arquivo transcrito vira uma aba acima, com o nome dele.",
+            )
+            self.transcript_label.configure(text="")
+            self._set_transcript_buttons("disabled")
+            return
+
+        atual = selecionar or self._transcript_current
+        if atual not in {e.transcript_path for e in entradas}:
+            atual = entradas[0].transcript_path
+
+        # Três por linha: nome de arquivo é comprido, e duas linhas de abas
+        # ainda cabem sem empurrar o texto para fora da tela.
+        for indice, entrada in enumerate(entradas):
+            botao = TabButton(
+                self.transcript_tabs,
+                text=history._cut(entrada.file_name or "(sem nome)", 26),
+                font=self.font_body,
+                command=self._transcript_command(entrada.transcript_path),
+                parent_bg=self.theme.paper,
+            )
+            botao.grid(row=indice // 3, column=indice % 3, sticky="w",
+                       padx=(0, 6), pady=(0, 4))
+            botao.apply_theme(
+                fill_on=mix(self.theme.paper, self.theme.accent, 0.16),
+                fill_off=self.theme.paper,
+                fg_on=self.theme.accent,
+                fg_off=self.theme.ink_soft,
+                parent_bg=self.theme.paper,
+            )
+            botao.set_selected(entrada.transcript_path == atual)
+            self.transcript_buttons[entrada.transcript_path] = botao
+
+        self.show_transcript(atual)
+
+    def _transcript_command(self, caminho: str) -> Callable[[], None]:
+        return lambda: self.show_transcript(caminho)
+
+    def show_transcript(self, caminho: str) -> None:
+        """Carrega na tela o texto corrido de um dos arquivos já transcritos."""
+        entrada = next(
+            (e for e in self._transcript_entries() if e.transcript_path == caminho), None
+        )
+        if entrada is None:
+            self._refresh_transcript_tabs()
+            return
+
+        self._transcript_current = caminho
+        for alvo, botao in self.transcript_buttons.items():
+            botao.set_selected(alvo == caminho)
+
+        try:
+            conteudo = Path(caminho).read_text(encoding="utf-8")
+        except OSError as exc:
+            conteudo = f"Não consegui ler o arquivo:\n{caminho}\n\n{exc}"
+        self._set_text(self.text_plain, conteudo or "(nenhuma fala foi encontrada)")
+
+        detalhes = [entrada.file_name or "(sem nome)"]
+        if entrada.duration:
+            detalhes.append(_clock(entrada.duration))
+        if entrada.model:
+            detalhes.append(entrada.model)
+        self.transcript_label.configure(text="  •  ".join(detalhes) + f"\n{caminho}")
+        self._set_transcript_buttons("normal")
+
+    def _set_transcript_buttons(self, state: str) -> None:
+        for botao in (
+            self.button_transcript_folder,
+            self.button_transcript_copy,
+            self.button_transcript_report,
+        ):
+            botao.configure(state=state)
+
+    def open_transcript_folder(self) -> None:
+        """Abre a pasta de saída com o .txt já selecionado, pronto para copiar."""
+        if self._transcript_current:
+            self._reveal_in_folder(Path(self._transcript_current))
+
+    def open_transcript_report(self) -> None:
+        entrada = next(
+            (e for e in self._transcript_entries()
+             if e.transcript_path == self._transcript_current),
+            None,
+        )
+        if entrada is None:
+            return
+        if entrada.report_path and Path(entrada.report_path).exists():
+            self._reveal(Path(entrada.report_path))
+        else:
+            messagebox.showinfo(
+                APP_NAME,
+                "O laudo deste trabalho não está mais na pasta de saída.",
+            )
+
+    def copy_transcript(self) -> None:
+        conteudo = self.text_plain.get("1.0", "end-1c")
+        self.root.clipboard_clear()
+        self.root.clipboard_append(conteudo)
+        self.status_label.configure(
+            text="Transcrição copiada para a área de transferência."
+        )
 
     def _build_files_page(self) -> None:
         """Página "Arquivos": o trabalho recém-terminado e o histórico de todos.
@@ -2563,11 +2757,6 @@ class LaudaApp:
         report_path = result.outputs.get("report.txt")
         if report_path and Path(report_path).exists():
             self._set_text(self.text_report, Path(report_path).read_text(encoding="utf-8"))
-        plain_path = result.outputs.get("transcript.txt")
-        if plain_path and Path(plain_path).exists():
-            content = Path(plain_path).read_text(encoding="utf-8")
-            self._set_text(self.text_plain, content or "(nenhuma fala foi encontrada)")
-
         # Antes do bloco da página "Arquivos": é aqui que a cópia da legenda
         # ao lado do vídeo acontece, e ela precisa aparecer na lista deste
         # trabalho — não na do próximo.
@@ -2576,6 +2765,12 @@ class LaudaApp:
         self._last_job_block = self._job_block(result)
         history.record(history.entry_from_result(result, self.folder_var.get()))
         self._refresh_files_page()
+
+        # A aba deste arquivo entra e já fica selecionada; as dos anteriores
+        # continuam na tela, que é o ponto de ter uma fila.
+        self._refresh_transcript_tabs(
+            selecionar=result.outputs.get("transcript.txt")
+        )
 
         self._show_report_view("report")
         self.nav.select(self.tab_report)
@@ -2717,6 +2912,27 @@ class LaudaApp:
                 subprocess.Popen(["xdg-open", str(path)])
         except Exception as exc:  # pragma: no cover - ambiente sem shell gráfico
             messagebox.showerror(APP_NAME, f"Não consegui abrir:\n{path}\n\n{exc}")
+
+    def _reveal_in_folder(self, path: Path) -> None:
+        """Abre a pasta com o arquivo **selecionado**, pronto para copiar.
+
+        Diferente de `_reveal`: aquele abre o arquivo no bloco de notas, este
+        mostra onde ele está. É o que se quer quando o objetivo é levar o .txt
+        para outro lugar.
+        """
+        try:
+            if sys.platform == "win32":
+                # O explorer exige /select,<caminho> junto, sem espaço.
+                subprocess.Popen(["explorer", f"/select,{path}"])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", "-R", str(path)])
+            else:
+                # Nem todo gerenciador de arquivos do Linux sabe selecionar.
+                subprocess.Popen(["xdg-open", str(path.parent)])
+        except Exception as exc:  # pragma: no cover - ambiente sem shell gráfico
+            messagebox.showerror(
+                APP_NAME, f"Não consegui abrir a pasta de:\n{path}\n\n{exc}"
+            )
 
     def open_folder(self) -> None:
         self._reveal(Path(self.folder_var.get()))

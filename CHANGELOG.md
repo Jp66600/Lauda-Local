@@ -2,6 +2,29 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.11.0-beta] — 2026-09-23
+
+### Adicionado
+
+- **A página Transcrição virou uma aba por arquivo.** Com uma fila de cinco
+  arquivos, ela mostrava só o último — os outros quatro existiam apenas na
+  pasta de saída. Agora cada trabalho vira uma aba com o **nome do arquivo de
+  origem**, e trocar de aba troca o texto na tela.
+- **Botão "Abrir o local do arquivo"**: abre a pasta de saída com o `.txt`
+  **já selecionado**, pronto para copiar ou arrastar. Diferente de "abrir o
+  laudo", que escancara o arquivo no bloco de notas.
+- A página também diz de qual arquivo é o texto na tela — nome, duração,
+  modelo e o caminho completo —, além de botões para copiar a transcrição e
+  abrir o laudo daquele mesmo trabalho.
+
+### Mudado
+
+- O histórico passou a guardar o caminho do texto corrido
+  (`transcript_path`), que é o que alimenta as abas. Entradas gravadas por
+  versões anteriores continuam sendo lidas; elas só não aparecem como aba.
+- Aba de arquivo que saiu do disco (apagado, pasta movida) some da página:
+  aba que abre o vazio é pior que aba nenhuma.
+
 ## [0.10.0-beta] — 2026-09-23
 
 ### Mudado

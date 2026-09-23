@@ -53,6 +53,13 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 
 A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
 
+**0.11.0-beta**
+- **Uma aba por arquivo na página Transcrição**, com o nome do arquivo de
+  origem. Processou cinco de uma vez? As cinco transcrições ficam a um clique,
+  em vez de só a última.
+- **Botão "Abrir o local do arquivo"**: a pasta de saída abre com o `.txt` já
+  selecionado, pronto para copiar.
+
 **0.10.0-beta** — o projeto virou **Lauda Local**. Já se chamou *MediaIntel
 Local* e *Vellum*; quem usava não perde nada, porque o perfil antigo é copiado
 para o novo na primeira abertura e o instalador remove as versões anteriores
@@ -213,7 +220,12 @@ carregados ao mesmo tempo brigam pela mesma memória. Arquivo com erro no meio d
 fila não interrompe os outros, e a fila inteira roda com as opções de quando
 você clicou em Processar. O **tamanho das legendas** é escolha sua — curtas
 (1–2 s), equilibradas (5–8 s, o padrão) ou blocos longos —, e não mais um
-acidente de como o modelo cortou os trechos. A página **Arquivos** guarda o
+acidente de como o modelo cortou os trechos.
+
+Terminada a fila, a página **Transcrição** tem **uma aba por arquivo**, com o
+nome do arquivo de origem: clicar troca o texto na tela. Embaixo dele, um botão
+**Abrir o local do arquivo** escancara a pasta de saída com o `.txt` já
+selecionado — não precisa caçar nada. A página **Arquivos** guarda o
 **histórico** de todos os trabalhos (duração, qualidade, CPU ou GPU, velocidade,
 cobertura, avisos e confiança), em `~/.lauda/history.json`.
 

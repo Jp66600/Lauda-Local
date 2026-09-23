@@ -1634,3 +1634,122 @@ def test_o_tamanho_da_legenda_fica_guardado(app, tmp_path: Path):
 
     salvo = json.loads((tmp_path / "ui.json").read_text(encoding="utf-8"))
     assert salvo["job"]["subtitle_density"] == "Blocos longos (até 1 min)"
+
+
+# ------------------------------------------- página Transcrição (abas) ----
+def _trabalho(app, tmp_path: Path, nome: str, texto: str = "conteudo"):
+    """Simula um trabalho terminado, com o .transcript.txt de verdade em disco."""
+    from tests_helpers import make_result
+
+    saida = tmp_path / "saida"
+    saida.mkdir(exist_ok=True)
+    resultado = make_result(texto)
+    resultado.source.path = f"C:/videos/{nome}"
+    resultado.source.name = nome
+    transcricao = saida / f"{Path(nome).stem}.transcript.txt"
+    transcricao.write_text(texto, encoding="utf-8")
+    laudo = saida / f"{Path(nome).stem}.report.txt"
+    laudo.write_text("laudo", encoding="utf-8")
+    resultado.outputs = {"transcript.txt": str(transcricao), "report.txt": str(laudo)}
+    app._on_done(resultado)
+    return transcricao
+
+
+def test_sem_trabalho_a_transcricao_convida_e_trava_os_botoes(app):
+    assert "aparece aqui depois de processar" in app.text_plain.get("1.0", "end-1c")
+    assert app.transcript_buttons == {}
+    assert str(app.button_transcript_folder["state"]) == "disabled"
+
+
+def test_cada_arquivo_transcrito_vira_uma_aba(app, tmp_path: Path):
+    _trabalho(app, tmp_path, "entrevista.mp4", "texto da entrevista")
+    _trabalho(app, tmp_path, "reuniao.mp4", "texto da reuniao")
+    _trabalho(app, tmp_path, "aula.mp3", "texto da aula")
+
+    assert len(app.transcript_buttons) == 3
+    rotulos = [b._text for b in app.transcript_buttons.values()]
+    assert rotulos == ["aula.mp3", "reuniao.mp4", "entrevista.mp4"], "do mais novo ao mais velho"
+
+
+def test_o_recem_terminado_fica_selecionado(app, tmp_path: Path):
+    _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
+    caminho = _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
+
+    assert app._transcript_current == str(caminho)
+    assert "texto do segundo" in app.text_plain.get("1.0", "end-1c")
+    selecionadas = [b._text for b in app.transcript_buttons.values() if b._selected]
+    assert selecionadas == ["segundo.mp4"]
+
+
+def test_clicar_na_aba_troca_o_texto(app, tmp_path: Path):
+    primeiro = _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
+    _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
+
+    app.show_transcript(str(primeiro))
+
+    assert "texto do primeiro" in app.text_plain.get("1.0", "end-1c")
+    assert app._transcript_current == str(primeiro)
+    selecionadas = [b._text for b in app.transcript_buttons.values() if b._selected]
+    assert selecionadas == ["primeiro.mp4"]
+
+
+def test_a_aba_diz_o_nome_do_arquivo_e_onde_ele_esta(app, tmp_path: Path):
+    caminho = _trabalho(app, tmp_path, "entrevista_do_diretor.mp4", "texto")
+
+    legenda = app.transcript_label.cget("text")
+    assert "entrevista_do_diretor.mp4" in legenda
+    assert str(caminho) in legenda, "o caminho completo evita ter de caçar na pasta"
+
+
+def test_a_pagina_nao_passa_do_limite_de_abas(app, tmp_path: Path):
+    from lauda.desktop import TRANSCRIPT_TABS
+
+    for indice in range(TRANSCRIPT_TABS + 3):
+        _trabalho(app, tmp_path, f"arquivo{indice}.mp4", f"texto {indice}")
+
+    assert len(app.transcript_buttons) == TRANSCRIPT_TABS
+    rotulos = [b._text for b in app.transcript_buttons.values()]
+    assert rotulos[0] == f"arquivo{TRANSCRIPT_TABS + 2}.mp4", "o mais novo encabeça"
+
+
+def test_transcricao_apagada_do_disco_perde_a_aba(app, tmp_path: Path):
+    """Aba que abre o vazio é pior que aba nenhuma."""
+    sumido = _trabalho(app, tmp_path, "sumido.mp4", "texto")
+    _trabalho(app, tmp_path, "presente.mp4", "texto")
+    sumido.unlink()
+
+    app._refresh_transcript_tabs()
+
+    assert [b._text for b in app.transcript_buttons.values()] == ["presente.mp4"]
+
+
+def test_o_botao_abre_a_pasta_com_o_arquivo_selecionado(app, tmp_path: Path, monkeypatch):
+    caminho = _trabalho(app, tmp_path, "entrevista.mp4", "texto")
+    revelados = []
+    monkeypatch.setattr(app, "_reveal_in_folder", revelados.append)
+
+    app.open_transcript_folder()
+
+    assert revelados == [Path(str(caminho))]
+
+
+def test_no_windows_o_explorer_recebe_select(monkeypatch, tmp_path: Path):
+    """`explorer /select,<caminho>` é o que seleciona o arquivo na pasta."""
+    from lauda import desktop
+
+    chamadas = []
+    monkeypatch.setattr(desktop.sys, "platform", "win32")
+    monkeypatch.setattr(desktop.subprocess, "Popen", lambda args: chamadas.append(args))
+
+    desktop.LaudaApp._reveal_in_folder(None, tmp_path / "a.txt")
+
+    assert chamadas == [["explorer", f"/select,{tmp_path / 'a.txt'}"]]
+
+
+def test_copiar_leva_a_transcricao_mostrada(app, tmp_path: Path):
+    _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
+    _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
+
+    app.copy_transcript()
+
+    assert "texto do segundo" in app.root.clipboard_get()

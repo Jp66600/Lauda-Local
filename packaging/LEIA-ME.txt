@@ -1,4 +1,4 @@
-LAUDA LOCAL — versão de teste 0.10.0-beta
+LAUDA LOCAL — versão de teste 0.11.0-beta
 =========================================
 
 O que é

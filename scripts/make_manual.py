@@ -296,7 +296,8 @@ def section_interface() -> list:
                  "Escolher o arquivo, ligar os recursos e processar."],
                 ["Relatório",
                  "A pré-visualização do laudo, com os botões de abrir e copiar."],
-                ["Transcrição", "Só o texto corrido, para ler ou copiar."],
+                ["Transcrição",
+                 "O texto corrido, com uma aba por arquivo transcrito."],
                 ["Arquivos",
                  "O que foi gerado agora e o histórico de todos os trabalhos."],
                 ["Desempenho", "Quanto da máquina o aplicativo pode usar."],
@@ -404,7 +405,14 @@ def section_interface() -> list:
             "<b>Relatório</b> — durante o trabalho mostra o <b>registro ao vivo</b>: "
             "arquivo, modelo, device e cada etapa, conforme acontecem. Quando termina, "
             "passa a mostrar o laudo completo, já formatado.",
-            "<b>Transcrição</b> — só o texto corrido, para ler ou copiar.",
+            "<b>Transcrição</b> — o texto corrido, com <b>uma aba por arquivo</b> "
+            "já transcrito, nomeada com o arquivo de origem. Processou cinco de uma "
+            "vez? As cinco ficam a um clique. Embaixo do texto, três botões: "
+            "<b>Abrir o local do arquivo</b> (a pasta de saída abre com o .txt já "
+            "selecionado, pronto para copiar), <b>Copiar o texto</b> e <b>Abrir o "
+            "laudo deste arquivo</b>. Acima do texto, o nome do arquivo, a duração, "
+            "o modelo usado e o caminho completo — para você não precisar caçar nada "
+            "na pasta.",
             "<b>Arquivos</b> — em cima, a lista dos arquivos salvos e o resumo do "
             "processamento (tempo, velocidade, modelo, idioma, palavras, cobertura) com "
             "os avisos; embaixo, o <b>histórico</b> de todos os trabalhos já feitos.",

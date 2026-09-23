@@ -218,7 +218,7 @@ def build() -> Path:
             "           |    +-- cartao direito    idioma, qualidade, recursos, saida",
             "           |    +-- rodape   botao Processar + Stepper + progresso",
             "           +-- tab_report     Relatorio  (+ abrir pasta / abrir / copiar)",
-            "           +-- tab_plain      Transcricao",
+            "           +-- tab_plain      Transcricao (uma aba por arquivo)",
             "           +-- tab_files      Arquivos   (ultimo trabalho + historico)",
             "           +-- tab_limits     Desempenho (Resumo/Limites/Diagnostico)",
             "           +-- tab_help       Ajuda          (o passo a passo)",

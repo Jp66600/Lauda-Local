@@ -46,6 +46,8 @@ class HistoryEntry:
     input_path: str = ""
     output_dir: str = ""
     report_path: str = ""
+    #: O texto corrido. E o que a pagina Transcricao abre ao trocar de arquivo.
+    transcript_path: str = ""
     status: str = "ok"            # ok | erro
     detail: str = ""              # motivo, quando status == "erro"
     duration: float | None = None
@@ -104,6 +106,7 @@ def entry_from_result(result: JobResult, output_dir: Path | str = "") -> History
         input_path=str(result.source.path or ""),
         output_dir=str(output_dir),
         report_path=result.outputs.get("report.txt", ""),
+        transcript_path=result.outputs.get("transcript.txt", ""),
         status="ok",
         duration=result.probe.duration,
         model=result.processing.model,
