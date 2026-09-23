@@ -16,8 +16,8 @@ Precisa de **Python 3.12** (3.11 a 3.13 funcionam; 3.14 não — ainda não há
 *wheels* do CTranslate2) e do **ffmpeg** no PATH.
 
 ```bash
-git clone https://github.com/Jp66600/lauda-local.git
-cd lauda-local
+git clone https://github.com/Jp66600/Lauda-Local.git
+cd Lauda-Local
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1        # no Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt

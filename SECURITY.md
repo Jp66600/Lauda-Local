@@ -3,7 +3,7 @@
 ## Como relatar uma falha
 
 **Não abra uma issue pública.** Use o
-[Security Advisory privado](https://github.com/Jp66600/lauda-local/security/advisories/new)
+[Security Advisory privado](https://github.com/Jp66600/Lauda-Local/security/advisories/new)
 do GitHub — só o mantenedor enxerga.
 
 Diga o que você conseguiu fazer, com que arquivo ou entrada, e em qual versão

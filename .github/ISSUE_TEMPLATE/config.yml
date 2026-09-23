@@ -1,11 +1,11 @@
 blank_issues_enabled: true
 contact_links:
   - name: Falha de segurança
-    url: https://github.com/Jp66600/lauda-local/security/advisories/new
+    url: https://github.com/Jp66600/Lauda-Local/security/advisories/new
     about: Não abra issue pública. Use o relato privado.
   - name: Como instalar e usar
-    url: https://github.com/Jp66600/lauda-local/blob/main/docs/Lauda-Local-Manual.pdf
+    url: https://github.com/Jp66600/Lauda-Local/blob/main/docs/Lauda-Local-Manual.pdf
     about: O manual cobre cada tela, cada opção e o que fazer quando dá errado.
   - name: Dúvida ou conversa
-    url: https://github.com/Jp66600/lauda-local/discussions
+    url: https://github.com/Jp66600/Lauda-Local/discussions
     about: Para perguntas abertas, antes de virar issue.

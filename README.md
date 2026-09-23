@@ -1,39 +1,82 @@
 # Lauda Local
 
-[![CI](https://github.com/Jp66600/lauda-local/actions/workflows/ci.yml/badge.svg)](https://github.com/Jp66600/lauda-local/actions/workflows/ci.yml)
+[![CI](https://github.com/Jp66600/Lauda-Local/actions/workflows/ci.yml/badge.svg)](https://github.com/Jp66600/Lauda-Local/actions/workflows/ci.yml)
 [![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Windows · Linux · macOS](https://img.shields.io/badge/windows%20%C2%B7%20linux%20%C2%B7%20macOS-lightgrey.svg)](#pré-requisitos)
 
-Extração **100% local** de informação de arquivos de áudio e vídeo. Você aponta
-um arquivo, o app devolve um **laudo em .TXT** com metadados técnicos,
-diagnóstico do áudio, idioma detectado e transcrição com timestamps — mais um
-**.json** estruturado e, opcionalmente, legendas **.srt/.vtt**.
+**Transcrição e laudo de áudio e vídeo, 100% no seu computador.**
 
-Nenhum byte do seu arquivo sai da máquina. Nenhuma API paga. Os modelos são
-baixados uma vez e reutilizados offline para sempre.
+Você aponta um arquivo; ele devolve um **laudo em `.txt`** com metadados
+técnicos, diagnóstico do áudio, idioma detectado e transcrição com marcação de
+tempo — mais um **`.json`** estruturado e, se quiser, legendas **`.srt`/`.vtt`**.
 
-> O projeto se chamou **MediaIntel Local** (até a 0.8.0-beta) e **Vellum** (na
-> 0.9.0-beta). Só o nome mudou. Quem já usava não perde nada: na primeira
-> abertura o perfil antigo — `~/.vellum` ou `~/.mediaintel` — é copiado para
-> `~/.lauda`, e o instalador remove as versões anteriores sozinho.
+Nenhum byte do seu arquivo sai da máquina. Nenhuma API paga, nenhuma conta,
+nenhuma telemetria. Os modelos são baixados uma vez e reutilizados offline para
+sempre.
 
-> **Guia rápido (3 páginas)**: [docs/Lauda-Local-Guia-Rapido.pdf](docs/Lauda-Local-Guia-Rapido.pdf)
-> — o passo a passo para quem só quer transcrever um arquivo.
->
-> **Manual completo (16 páginas)**: [docs/Lauda-Local-Manual.pdf](docs/Lauda-Local-Manual.pdf)
-> — cada tela, cada opção e o que fazer quando algo dá errado.
->
-> **Decisões técnicas (14 páginas)**: [docs/Lauda-Local-Decisoes-Tecnicas.pdf](docs/Lauda-Local-Decisoes-Tecnicas.pdf)
-> — arquitetura, o porquê de cada escolha, as medições e os limites assumidos.
-> É a leitura para quem vai mexer no código.
->
-> **Arquitetura**: [ARCHITECTURE.md](ARCHITECTURE.md) — o mapa curto para quem
-> chega agora: onde fica cada coisa, como um trabalho corre e o que não se mexe.
->
-> **Front-end (14 páginas)**: [docs/Lauda-Local-Front-End.pdf](docs/Lauda-Local-Front-End.pdf)
-> — como a interface foi construída e como escrever um prompt que a altere sem
-> quebrar o resto: vocabulário, restrições e exemplos prontos para colar.
+```bash
+lauda run entrevista.mp4 --diarize --srt -o saida
+```
+
+…ou abra a janela e arraste o arquivo para dentro:
+
+```bash
+lauda-app
+```
+
+---
+
+## Por onde começar
+
+| Você quer | Faça isto |
+|---|---|
+| **Só usar**, no Windows | Baixe o instalador em [Releases](https://github.com/Jp66600/Lauda-Local/releases). Ele traz tudo dentro, inclusive o ffmpeg, e não precisa de Python. |
+| **Usar pelo terminal** | [Instalação](#instalação) → `lauda run arquivo.mp4 -o saida` |
+| **Mexer no código** | [CONTRIBUTING.md](CONTRIBUTING.md) — ambiente, testes e as nove regras que não se quebram |
+| **Entender como foi feito** | [ARCHITECTURE.md](ARCHITECTURE.md) — o mapa curto: onde fica cada coisa e como um trabalho corre |
+
+### Os manuais
+
+Todos gerados por script a partir do código, então não envelhecem sozinhos:
+
+| Documento | Páginas | Para quem |
+|---|---|---|
+| [Guia rápido](docs/Lauda-Local-Guia-Rapido.pdf) | 3 | quem só quer transcrever um arquivo hoje |
+| [Manual completo](docs/Lauda-Local-Manual.pdf) | 18 | cada tela, cada opção e o que fazer quando dá errado |
+| [Decisões técnicas](docs/Lauda-Local-Decisoes-Tecnicas.pdf) | 16 | o porquê de cada escolha, as medições e os limites assumidos |
+| [Front-end](docs/Lauda-Local-Front-End.pdf) | 16 | como a interface foi construída e como pedir mudanças nela |
+
+---
+
+## O que há de novo
+
+A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
+
+**0.10.0-beta** — o projeto virou **Lauda Local**. Já se chamou *MediaIntel
+Local* e *Vellum*; quem usava não perde nada, porque o perfil antigo é copiado
+para o novo na primeira abertura e o instalador remove as versões anteriores
+sozinho.
+
+**0.9.0-beta**
+- **Tamanho das legendas** virou escolha: curtas (1–2 s), equilibradas (5–8 s)
+  ou blocos longos. Nenhum modo perde texto nem deixa legenda na tela durante
+  uma pausa.
+- **Página Desempenho em três abas**: quatro opções prontas (Leve, Equilibrado,
+  Rápido, Máximo), os controles finos e o diagnóstico da máquina sempre visível.
+  Ele avisa **antes** quando o trabalho vai exigir mais memória do que sobrou.
+
+**0.8.0-beta**
+- **Fila de arquivos**: solte vários de uma vez; rodam um por vez, e um arquivo
+  com erro não para os outros.
+- **Histórico** de tudo que já passou, com cobertura, velocidade e confiança.
+
+**0.7.0-beta**
+- **Cobertura da linha do tempo**: todo laudo mede quanto do arquivo virou texto
+  e lista os trechos sem fala que **não** são silêncio. É a rede de segurança
+  contra o pior defeito possível num transcritor — sumir com um pedaço sem
+  avisar.
+- Instalador para Windows, com ffmpeg embutido.
 
 ---
 
@@ -101,14 +144,14 @@ LAUDA_FFPROBE=C:\ffmpeg\bin\ffprobe.exe
 ### Baixar
 
 Quem só quer **usar** no Windows: pegue o instalador em
-[Releases](https://github.com/Jp66600/lauda-local/releases) — ele traz tudo dentro,
+[Releases](https://github.com/Jp66600/Lauda-Local/releases) — ele traz tudo dentro,
 inclusive o ffmpeg, e não precisa de Python.
 
 Quem quer **mexer no código**:
 
 ```bash
-git clone https://github.com/Jp66600/lauda-local.git
-cd lauda-local
+git clone https://github.com/Jp66600/Lauda-Local.git
+cd Lauda-Local
 ```
 
 ### Windows (PowerShell)
