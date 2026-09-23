@@ -131,7 +131,7 @@ def rodar_inno() -> Path | None:
         return None
     print("-- Inno Setup...")
     subprocess.run([str(iscc), str(ISS)], check=True, cwd=RAIZ)
-    setups = sorted(DIST.glob("Lauda Local-*-setup.exe"))
+    setups = sorted(DIST.glob("LaudaLocal-*-setup.exe"))
     return setups[-1] if setups else None
 
 
