@@ -1,4 +1,4 @@
-"""Gera o ícone do aplicativo (assets/vellum.ico) com Pillow.
+"""Gera o ícone do aplicativo (assets/lauda.ico) com Pillow.
 
     python scripts/make_icon.py
 
@@ -57,10 +57,10 @@ def main() -> int:
     ASSETS.mkdir(parents=True, exist_ok=True)
     master = draw_icon(512)
 
-    ico_path = ASSETS / "vellum.ico"
+    ico_path = ASSETS / "lauda.ico"
     master.save(ico_path, format="ICO", sizes=[(size, size) for size in SIZES])
 
-    png_path = ASSETS / "vellum.png"
+    png_path = ASSETS / "lauda.png"
     master.resize((256, 256), Image.LANCZOS).save(png_path, format="PNG")
 
     print(f"ícone : {ico_path} ({ico_path.stat().st_size} bytes)")

@@ -1,4 +1,4 @@
-"""Gera o manual do usuário em PDF (docs/Vellum-Manual.pdf).
+"""Gera o manual do usuário em PDF (docs/Lauda-Local-Manual.pdf).
 
     python scripts/make_manual.py
 
@@ -50,9 +50,9 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 
-from vellum import APP_NAME, APP_VERSION
+from lauda import APP_NAME, APP_VERSION
 
-OUTPUT = ROOT / "docs" / "Vellum-Manual.pdf"
+OUTPUT = ROOT / "docs" / "Lauda-Local-Manual.pdf"
 
 
 # --------------------------------------------------------------------------- #
@@ -65,7 +65,7 @@ class Manual(BaseDocTemplate):
             pagesize=A4,
             title=f"{APP_NAME} {ARROW} Manual do usuário",
             author=APP_NAME,
-            subject="Manual de uso do Vellum",
+            subject="Manual de uso do Lauda Local",
             creator=f"{APP_NAME} {APP_VERSION}",
             leftMargin=PAGE_MARGIN, rightMargin=PAGE_MARGIN,
             topMargin=18 * mm, bottomMargin=18 * mm,
@@ -168,7 +168,7 @@ def toc_page() -> list:
 
 def section_intro() -> list:
     return [
-        heading("1. O que é o Vellum"),
+        heading("1. O que é o Lauda Local"),
         para(
             "Você aponta um arquivo de áudio ou vídeo. O aplicativo devolve um "
             "<b>laudo em texto</b> com tudo o que dá para extrair localmente: metadados "
@@ -221,7 +221,7 @@ def section_open() -> list:
         ),
         heading("Forma 1 — atalho na Área de Trabalho (a normal)", "h2"),
         para(
-            "Dê dois cliques no atalho <b>Vellum</b>. Abre uma <b>janela "
+            "Dê dois cliques no atalho <b>Lauda Local</b>. Abre uma <b>janela "
             "própria do programa</b>: não é site, não abre navegador, e não fica nenhuma "
             "janela preta de console atrás. Para encerrar, feche a janela."
         ),
@@ -233,7 +233,7 @@ def section_open() -> list:
         heading("Forma 2 — a mesma janela, pelo terminal", "h2"),
         code(
             "cd C:\\Users\\PC\\Desktop\\projetos\\mediaintel-local\n"
-            ".\\.venv\\Scripts\\vellum.exe app"
+            ".\\.venv\\Scripts\\lauda.exe app"
         ),
         heading("Forma 3 — interface no navegador (alternativa)", "h2"),
         para(
@@ -241,14 +241,14 @@ def section_open() -> list:
             "acessar o aplicativo de outro computador da mesma rede. Ela exige o Gradio "
             "instalado e sobe um servidor local em 127.0.0.1:"
         ),
-        code(".\\.venv\\Scripts\\vellum.exe ui"),
+        code(".\\.venv\\Scripts\\lauda.exe ui"),
         heading("Forma 4 — linha de comando (para repetir e automatizar)", "h2"),
         para(
             "É a forma mais rápida quando você já sabe o que quer, e a única que dá para "
             "colocar em um script:"
         ),
         code(
-            '.\\.venv\\Scripts\\vellum.exe run "C:\\videos\\entrevista.mp4" '
+            '.\\.venv\\Scripts\\lauda.exe run "C:\\videos\\entrevista.mp4" '
             "-m small -l pt --diarize --srt -o .\\saida"
         ),
         Spacer(1, 4 * mm),
@@ -274,7 +274,7 @@ def section_open() -> list:
             "O comando abaixo faz um diagnóstico completo do ambiente: ffmpeg, placa de "
             "vídeo, memória, modelos já baixados, diarização e resumo local."
         ),
-        code(".\\.venv\\Scripts\\vellum.exe doctor"),
+        code(".\\.venv\\Scripts\\lauda.exe doctor"),
         PageBreak(),
     ]
 
@@ -351,7 +351,7 @@ def section_interface() -> list:
             "O que você escolhe fica guardado",
             "Idioma, qualidade, os interruptores de recurso e a pasta de saída voltam "
             "como você deixou na última vez — ficam em "
-            "<b>~/.vellum/ui.json</b>, junto do tema e dos limites de máquina. "
+            "<b>~/.lauda/ui.json</b>, junto do tema e dos limites de máquina. "
             "A página Configurações mostra o que está guardado e tem o botão "
             "<b>Restaurar padrões</b> para zerar tudo de uma vez.",
             TEAL,
@@ -616,7 +616,7 @@ def section_interface() -> list:
             "Para forçar um tema na abertura, sem mexer no que está salvo, use "
             "<b>--theme</b> com auto, claro ou escuro."
         ),
-        code(r".\.venv\Scripts\vellum.exe app --theme escuro"),
+        code(r".\.venv\Scripts\lauda.exe app --theme escuro"),
         Spacer(1, 3 * mm),
         note(
             "A janela não trava enquanto processa",
@@ -757,21 +757,21 @@ def section_cli() -> list:
         grid(
             ["Comando", "O que faz"],
             [
-                ["vellum run ARQUIVO", "Processa um arquivo e gera os relatórios."],
-                ["vellum app [--theme]",
+                ["lauda run ARQUIVO", "Processa um arquivo e gera os relatórios."],
+                ["lauda app [--theme]",
                  "Abre o aplicativo em janela própria. --theme aceita auto, claro ou escuro."],
-                ["vellum ui", "Abre a interface no navegador."],
-                ["vellum doctor",
+                ["lauda ui", "Abre a interface no navegador."],
+                ["lauda doctor",
                  "Diagnóstico do ambiente: ffmpeg, GPU, memória, modelos, diarização, Ollama."],
-                ["vellum models",
+                ["lauda models",
                  "Lista os modelos e diz quais cabem na memória da sua máquina."],
-                ["vellum checkpoints",
+                ["lauda checkpoints",
                  "Lista os trabalhos interrompidos que dá para retomar. Com --limpar, "
                  "apaga todos."],
             ],
             widths=[52 * mm, 118 * mm],
         ),
-        heading("Opções de vellum run", "h2"),
+        heading("Opções de lauda run", "h2"),
         grid(
             ["Opção", "Padrão", "O que faz"],
             [
@@ -904,7 +904,7 @@ def section_extras() -> list:
             "tem dois ajustes. O primeiro é dizer o número de pessoas, quando souber:"
         ),
         code(
-            '.\\.venv\\Scripts\\vellum.exe run "reuniao.mp4" --diarize --num-speakers 3'
+            '.\\.venv\\Scripts\\lauda.exe run "reuniao.mp4" --diarize --num-speakers 3'
         ),
         Spacer(1, 3 * mm),
         para(
@@ -912,7 +912,7 @@ def section_extras() -> list:
             "vozes, aumente para juntar."
         ),
         code(
-            '.\\.venv\\Scripts\\vellum.exe run "reuniao.mp4" --diarize '
+            '.\\.venv\\Scripts\\lauda.exe run "reuniao.mp4" --diarize '
             "--speaker-threshold 0.22"
         ),
         Spacer(1, 3 * mm),
@@ -999,7 +999,7 @@ def section_trouble() -> list:
             strong_columns=(0,),
         ),
         heading("O comando que responde quase tudo", "h2"),
-        code(".\\.venv\\Scripts\\vellum.exe doctor"),
+        code(".\\.venv\\Scripts\\lauda.exe doctor"),
         Spacer(1, 3 * mm),
         para(
             "Ele mostra, em uma tela só: se o ffmpeg foi encontrado e onde, qual placa de "
@@ -1063,7 +1063,7 @@ def section_limits() -> list:
                 ["saida\\", "Os relatórios, transcrições, legendas e miniaturas."],
                 ["models\\", "Os modelos baixados. Apagar libera espaço, mas força novo download."],
                 [".venv\\", "O ambiente Python do aplicativo. Não mexa."],
-                ["src\\vellum\\", "O código-fonte."],
+                ["src\\lauda\\", "O código-fonte."],
                 ["docs\\", "Este manual e o documento de desenho."],
                 ["tests\\", "Os testes automatizados e as mídias de exemplo."],
             ],

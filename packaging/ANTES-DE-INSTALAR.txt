@@ -1,4 +1,4 @@
-VELLUM — versão de teste
+LAUDA LOCAL — versão de teste
 
 Obrigado por experimentar. Quatro coisas que vale saber antes de continuar:
 
@@ -29,7 +29,7 @@ Obrigado por experimentar. Quatro coisas que vale saber antes de continuar:
    Se você testou aquela versão, este instalador remove a antiga sozinho antes
    de instalar — para não ficarem dois programas na lista. Suas escolhas (tema,
    opções, limites) e o histórico são copiados para a pasta nova na primeira
-   vez que o Vellum abrir.
+   vez que o Lauda Local abrir.
 
    A pasta antiga (C:\Users\<você>\.mediaintel) é mantida como está. Se tudo
    funcionar, você pode apagá-la quando quiser.
@@ -43,5 +43,5 @@ Obrigado por experimentar. Quatro coisas que vale saber antes de continuar:
 
 
 O que ocupa espaço: o programa em si tem cerca de 700 MB e os modelos baixados,
-de 0,5 a 3 GB, ficam em C:\Users\<você>\.vellum — fora da pasta do programa,
+de 0,5 a 3 GB, ficam em C:\Users\<você>\.lauda — fora da pasta do programa,
 então desinstalar não apaga nem obriga a baixar de novo.

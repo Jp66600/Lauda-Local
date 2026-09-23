@@ -1,4 +1,4 @@
-VELLUM — versão de teste 0.9.0-beta
+LAUDA LOCAL — versão de teste 0.10.0-beta
 ==================================
 
 O que é
@@ -57,10 +57,10 @@ Se algo der errado
 ------------------
 Existem dois arquivos de log em:
 
-    C:\Users\<seu usuário>\.vellum\logs\
+    C:\Users\<seu usuário>\.lauda\logs\
 
-    vellum.log          o aplicativo
-    vellum-worker.log   o processamento em si
+    lauda.log          o aplicativo
+    lauda-worker.log   o processamento em si
 
 Se algo falhar, me mande os dois junto com a descrição — sem eles fica
 difícil descobrir o motivo. Durante o trabalho, a página Relatório também

@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from vellum.ffmpeg_tools import resolve_tools
+from lauda.ffmpeg_tools import resolve_tools
 
 MEDIA_DIR = Path(__file__).resolve().parents[1] / "tests" / "_media"
 
@@ -169,7 +169,7 @@ def main() -> int:
         "-i", str(speech), "-shortest",
         "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac",
         "-metadata", "title=Entrevista de teste",
-        "-metadata", "artist=Vellum",
+        "-metadata", "artist=Lauda Local",
         str(entrevista),
     ])
     print(f"  entrevista.mp4    {entrevista.stat().st_size:>9} bytes")

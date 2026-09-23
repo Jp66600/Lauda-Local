@@ -39,14 +39,14 @@ def tk_root():
 @pytest.fixture()
 def app(tk_root, tmp_path: Path, monkeypatch):
     """Cria o aplicativo com a janela escondida e o encerra ao final."""
-    from vellum import desktop, theme
+    from lauda import desktop, theme
 
     # A preferência de tema não pode vazar para o perfil real do usuário.
     monkeypatch.setattr(theme, "PREFS_PATH", tmp_path / "ui.json")
 
     window = tkinter.Toplevel(tk_root)
     window.withdraw()
-    instance = desktop.VellumApp(window)
+    instance = desktop.LaudaApp(window)
     instance.folder_var.set(str(tmp_path))
     # Teste não pode abrir janela do Explorador na máquina de quem roda a suíte.
     instance.var_open_folder.set(False)
@@ -83,7 +83,7 @@ def _pump(app, seconds: float = 120.0) -> None:
 
 
 def test_janela_abre_com_o_passo_a_passo(app):
-    assert app.root.title().startswith("Vellum")
+    assert app.root.title().startswith("Lauda Local")
     ajuda = app.text_help.get("1.0", "end-1c")
     assert "COMO USAR" in ajuda
     assert "1." in ajuda and "4." in ajuda
@@ -98,7 +98,7 @@ def test_pasta_de_saida_ja_vem_preenchida(app, tmp_path: Path):
 def test_processar_sem_arquivo_avisa_e_nao_roda(app, monkeypatch):
     avisos: list[str] = []
     monkeypatch.setattr(
-        "vellum.desktop.messagebox.showwarning",
+        "lauda.desktop.messagebox.showwarning",
         lambda title, message: avisos.append(message),
     )
     app.start()
@@ -107,7 +107,7 @@ def test_processar_sem_arquivo_avisa_e_nao_roda(app, monkeypatch):
 
 
 def test_selecao_de_modelo_e_idioma_viram_valores_reais(app):
-    from vellum.desktop import LANGUAGES, MODEL_LABELS
+    from lauda.desktop import LANGUAGES, MODEL_LABELS
 
     app.language_var.set("Português")
     app.model_var.set("Rascunho — bem rápido (tiny)")
@@ -125,7 +125,7 @@ def test_processa_e_mostra_a_previa_na_janela(app, silent_video: Path, tmp_path:
     assert app.result is not None, "o resultado não chegou à interface"
 
     previa = app.text_report.get("1.0", "end-1c")
-    assert "VELLUM" in previa, "o relatório não foi carregado na prévia"
+    assert "LAUDA LOCAL" in previa, "o relatório não foi carregado na prévia"
     assert "1. IDENTIDADE DO ARQUIVO" in previa
     assert silent_video.name in previa
 
@@ -147,7 +147,7 @@ def test_processa_e_mostra_a_previa_na_janela(app, silent_video: Path, tmp_path:
 def test_erro_do_pipeline_vira_mensagem_amigavel(app, invalid_file: Path, monkeypatch):
     erros: list[str] = []
     monkeypatch.setattr(
-        "vellum.desktop.messagebox.showerror",
+        "lauda.desktop.messagebox.showerror",
         lambda title, message: erros.append(message),
     )
     app.input_path = invalid_file
@@ -164,7 +164,7 @@ def test_erro_do_pipeline_vira_mensagem_amigavel(app, invalid_file: Path, monkey
 # Tema
 # --------------------------------------------------------------------------- #
 def test_alterna_para_o_modo_escuro(app):
-    from vellum.theme import DARK, LIGHT
+    from lauda.theme import DARK, LIGHT
 
     app.set_theme("claro")
     assert app.theme is LIGHT
@@ -177,7 +177,7 @@ def test_alterna_para_o_modo_escuro(app):
 
 
 def test_o_modo_escuro_repinta_a_previa(app):
-    from vellum.theme import DARK, LIGHT
+    from lauda.theme import DARK, LIGHT
 
     app.set_theme("claro")
     claro = app.text_report.cget("background")
@@ -194,7 +194,7 @@ def test_o_modo_escuro_repinta_a_previa(app):
 
 
 def test_a_escolha_de_tema_fica_guardada(app, tmp_path: Path):
-    from vellum.theme import load_choice
+    from lauda.theme import load_choice
 
     app.set_theme("escuro")
     assert load_choice() == "escuro"
@@ -219,7 +219,7 @@ def test_troca_de_tema_nao_apaga_o_relatorio(app, silent_video: Path):
 # Limites de uso (os sliders)
 # --------------------------------------------------------------------------- #
 def test_sliders_comecam_no_padrao(app):
-    from vellum.limits import DEFAULT
+    from lauda.limits import DEFAULT
 
     assert app.limits == DEFAULT
     assert app.limit_vars["cpu_percent"].get() == DEFAULT.cpu_percent
@@ -252,14 +252,14 @@ def test_slider_respeita_o_minimo(app):
 
 
 def test_limites_ficam_salvos_no_perfil(app):
-    from vellum.limits import load
+    from lauda.limits import load
 
     app._on_slider("ram_percent", "30")
     assert load().ram_percent == 30
 
 
 def test_voltar_ao_padrao(app):
-    from vellum.limits import DEFAULT
+    from lauda.limits import DEFAULT
 
     app._on_slider("cpu_percent", "20")
     app._on_slider("gpu_percent", "0")
@@ -283,16 +283,16 @@ def test_os_limites_chegam_ao_processamento(app, silent_video: Path, monkeypatch
 
     def fake_run(options, progress=None, on_event=None, cancel=None, **kwargs):
         capturado["limits"] = options.limits
-        raise VellumErrorForTest("parando aqui de propósito")
+        raise LaudaErrorForTest("parando aqui de propósito")
 
-    from vellum import runner
+    from lauda import runner
 
-    class VellumErrorForTest(Exception):
+    class LaudaErrorForTest(Exception):
         pass
 
     monkeypatch.setattr(runner, "run_with_recovery", fake_run)
     monkeypatch.setattr(
-        "vellum.desktop.messagebox.showerror", lambda title, message: None
+        "lauda.desktop.messagebox.showerror", lambda title, message: None
     )
 
     app._on_slider("cpu_percent", "40")
@@ -326,8 +326,8 @@ def test_o_resumo_diz_o_modo(app):
 
 
 def test_o_modo_rapido_chega_ao_processamento(app, silent_video, monkeypatch):
-    from vellum import runner
-    from vellum.desktop import BATCH_SIZE
+    from lauda import runner
+    from lauda.desktop import BATCH_SIZE
 
     capturado: dict = {}
 
@@ -337,7 +337,7 @@ def test_o_modo_rapido_chega_ao_processamento(app, silent_video, monkeypatch):
 
     monkeypatch.setattr(runner, "run_with_recovery", fake_run)
     monkeypatch.setattr(
-        "vellum.desktop.messagebox.showerror", lambda title, message: None
+        "lauda.desktop.messagebox.showerror", lambda title, message: None
     )
 
     app.var_fast.set(True)
@@ -400,7 +400,7 @@ def _com_tamanho(widget, width: int, height: int, monkeypatch) -> None:
 
 def test_o_interruptor_liga_e_desliga_no_clique(app):
     """O interruptor é desenhado no Canvas: o clique tem de continuar valendo."""
-    from vellum.widgets import ToggleSwitch
+    from lauda.widgets import ToggleSwitch
 
     switch = next(s for s in app._switches if s._variable is app.var_srt)
     assert isinstance(switch, ToggleSwitch)
@@ -437,7 +437,7 @@ def test_a_barra_de_rolagem_some_quando_tudo_cabe(app, monkeypatch):
 
 def test_a_barra_de_rolagem_pede_moveto_ao_arrastar(app, monkeypatch):
     """Ela substitui a ttk.Scrollbar: tem de falar o mesmo protocolo do Tk."""
-    from vellum.widgets import RoundedScrollbar
+    from lauda.widgets import RoundedScrollbar
 
     pedidos: list[tuple] = []
     barra = RoundedScrollbar(
@@ -515,7 +515,7 @@ def test_soltar_um_arquivo_equivale_a_escolher(app, silent_video: Path):
 def test_soltar_uma_pasta_avisa_em_vez_de_aceitar(app, tmp_path: Path, monkeypatch):
     avisos: list[str] = []
     monkeypatch.setattr(
-        "vellum.desktop.messagebox.showwarning",
+        "lauda.desktop.messagebox.showwarning",
         lambda title, message: avisos.append(message),
     )
     evento = types.SimpleNamespace(data="{" + str(tmp_path) + "}")
@@ -526,7 +526,7 @@ def test_soltar_uma_pasta_avisa_em_vez_de_aceitar(app, tmp_path: Path, monkeypat
 
 
 def test_a_trilha_de_etapas_acompanha_o_processamento(app):
-    from vellum.desktop import PIPELINE_STEPS, Progress
+    from lauda.desktop import PIPELINE_STEPS, Progress
 
     app._on_progress(Progress(stage="extract", fraction=0.2, message=""))
     assert app.stepper.current == 1, "extrair áudio é pré-processamento"
@@ -540,7 +540,7 @@ def test_a_trilha_de_etapas_acompanha_o_processamento(app):
 
 
 def test_o_estado_na_lateral_segue_o_progresso(app):
-    from vellum.desktop import Progress
+    from lauda.desktop import Progress
 
     app._on_progress(Progress(stage="asr", fraction=0.42, message=""))
     assert "Transcrevendo" in app.state_label.cget("text")
@@ -549,7 +549,7 @@ def test_o_estado_na_lateral_segue_o_progresso(app):
 
 def test_erro_pinta_o_estado_de_vermelho(app, monkeypatch):
     monkeypatch.setattr(
-        "vellum.desktop.messagebox.showerror", lambda title, message: None
+        "lauda.desktop.messagebox.showerror", lambda title, message: None
     )
     app._on_error("deu ruim")
 
@@ -562,7 +562,7 @@ def test_erro_pinta_o_estado_de_vermelho(app, monkeypatch):
 # --------------------------------------------------------------------------- #
 def _check(level: str = "ruim"):
     """Uma avaliação de mentira, para não depender do hardware da máquina de teste."""
-    from vellum.hardware import Finding, MachineCheck
+    from lauda.hardware import Finding, MachineCheck
 
     return MachineCheck(
         level=level,
@@ -603,7 +603,7 @@ def test_o_veredito_aparece_na_pagina_desempenho(app):
 
 
 def test_quem_pediu_para_nao_avisar_nao_e_incomodado(app, tmp_path: Path, monkeypatch):
-    from vellum import theme
+    from lauda import theme
 
     monkeypatch.setattr(theme, "PREFS_PATH", tmp_path / "ui.json")
     theme.save_flag("skip_machine_warning", True)
@@ -637,7 +637,7 @@ def test_fechar_o_aplicativo_encerra(app):
 
 
 def test_a_escolha_de_nao_avisar_fica_salva(app, tmp_path: Path, monkeypatch):
-    from vellum import theme
+    from lauda import theme
 
     monkeypatch.setattr(theme, "PREFS_PATH", tmp_path / "ui.json")
     app._on_close = lambda: None  # type: ignore[method-assign]
@@ -666,7 +666,7 @@ def test_sem_avaliacao_nao_ha_dialogo(app):
 
 def _botao_por_texto(janela, texto: str):
     """Acha um RoundedButton pelo rótulo, varrendo a árvore da janela."""
-    from vellum.widgets import RoundedButton
+    from lauda.widgets import RoundedButton
 
     def varrer(widget):
         yield widget
@@ -681,7 +681,7 @@ def _botao_por_texto(janela, texto: str):
 
 def test_a_nuvem_vem_do_png_e_ganha_a_cor_do_tema(app):
     """O arquivo entra como forma; a cor tem de sair sempre do tema."""
-    from vellum.widgets import CLOUD_PNG, tinted_icon
+    from lauda.widgets import CLOUD_PNG, tinted_icon
 
     assert CLOUD_PNG.exists(), "o ícone precisa viajar junto com o pacote"
     escuro = tinted_icon(str(CLOUD_PNG), 74, app.theme.accent)
@@ -693,7 +693,7 @@ def test_a_nuvem_vem_do_png_e_ganha_a_cor_do_tema(app):
 
 
 def test_arquivo_de_icone_ausente_nao_derruba_a_tela(app):
-    from vellum.widgets import tinted_icon
+    from lauda.widgets import tinted_icon
 
     assert tinted_icon("C:/nao/existe.png", 32, "#000000") is None
 
@@ -712,7 +712,7 @@ def test_a_zona_de_soltar_desenha_a_nuvem(app, monkeypatch):
 # Preferências da tela de trabalho (BACKLOG-016)
 # --------------------------------------------------------------------------- #
 def test_as_escolhas_da_tela_vao_para_o_disco(app):
-    from vellum.theme import load_value
+    from lauda.theme import load_value
 
     app.language_var.set("Português")
     app.var_diarize.set(True)
@@ -729,7 +729,7 @@ def test_as_escolhas_da_tela_vao_para_o_disco(app):
 
 def test_a_proxima_abertura_encontra_as_mesmas_escolhas(app, tk_root, tmp_path: Path):
     """É o teste que importa: fechar e abrir tem de devolver a mesma tela."""
-    from vellum import desktop
+    from lauda import desktop
 
     app.model_var.set("Máxima qualidade — lento (large-v3)")
     app.var_vtt.set(True)
@@ -738,7 +738,7 @@ def test_a_proxima_abertura_encontra_as_mesmas_escolhas(app, tk_root, tmp_path: 
 
     janela = tkinter.Toplevel(tk_root)
     janela.withdraw()
-    outra = desktop.VellumApp(janela)
+    outra = desktop.LaudaApp(janela)
     try:
         assert outra.model_var.get() == "Máxima qualidade — lento (large-v3)"
         assert outra.var_vtt.get() is True
@@ -750,14 +750,14 @@ def test_a_proxima_abertura_encontra_as_mesmas_escolhas(app, tk_root, tmp_path: 
 
 def test_valor_que_nao_existe_mais_volta_ao_padrao(app, tk_root):
     """Se um rótulo sumir entre versões, o combobox não pode mostrar fantasma."""
-    from vellum import desktop
-    from vellum.theme import save_value
+    from lauda import desktop
+    from lauda.theme import save_value
 
     save_value("job", {"quality": "Modelo que foi removido", "language": "Klingon"})
 
     janela = tkinter.Toplevel(tk_root)
     janela.withdraw()
-    outra = desktop.VellumApp(janela)
+    outra = desktop.LaudaApp(janela)
     try:
         assert outra.model_var.get() in [rotulo for rotulo, _ in desktop.MODEL_LABELS]
         assert outra.language_var.get() in [rotulo for rotulo, _ in desktop.LANGUAGES]
@@ -767,14 +767,14 @@ def test_valor_que_nao_existe_mais_volta_ao_padrao(app, tk_root):
 
 
 def test_perfil_corrompido_nao_impede_a_abertura(app, tk_root):
-    from vellum import desktop
-    from vellum.theme import save_value
+    from lauda import desktop
+    from lauda.theme import save_value
 
     save_value("job", "isto deveria ser um dicionário")
 
     janela = tkinter.Toplevel(tk_root)
     janela.withdraw()
-    outra = desktop.VellumApp(janela)
+    outra = desktop.LaudaApp(janela)
     try:
         assert outra.var_srt.get() is False, "sem preferências válidas, valem os padrões"
     finally:
@@ -792,7 +792,7 @@ def test_mudar_uma_opcao_agenda_a_gravacao(app):
 
 
 def test_fechar_logo_apos_mudar_nao_perde_a_escolha(app):
-    from vellum.theme import load_value
+    from lauda.theme import load_value
 
     app.var_words.set(True)
     assert app._prefs_after is not None
@@ -841,7 +841,7 @@ def test_configuracoes_resume_o_que_esta_guardado(app):
 
 def test_restaurar_padroes_desliga_tudo(app):
     """Sem caminho de volta, uma opção esquecida ligada vira mistério."""
-    from vellum.theme import load_value
+    from lauda.theme import load_value
 
     app.var_diarize.set(True)
     app.var_fast.set(True)
@@ -864,7 +864,7 @@ def test_o_log_do_app_chega_a_tela(app):
     import logging
 
     app._show_report_view("log")
-    logging.getLogger("vellum.teste").info("carregando o modelo")
+    logging.getLogger("lauda.teste").info("carregando o modelo")
     _drenar(app)
 
     assert any("carregando o modelo" in linha for linha in app._log_lines)
@@ -873,7 +873,7 @@ def test_o_log_do_app_chega_a_tela(app):
 
 def test_cada_etapa_vira_uma_linha_so(app):
     """O ASR reporta a cada segmento; o registro não pode repetir a etapa."""
-    from vellum.desktop import Progress
+    from lauda.desktop import Progress
 
     app._show_report_view("log")
     for fracao in (0.30, 0.45, 0.60):
@@ -885,7 +885,7 @@ def test_cada_etapa_vira_uma_linha_so(app):
 
 
 def test_o_registro_nao_cresce_sem_limite(app):
-    from vellum.desktop import LOG_VIEW_LINES
+    from lauda.desktop import LOG_VIEW_LINES
 
     for indice in range(LOG_VIEW_LINES + 120):
         app._append_log(f"linha {indice}")
@@ -922,17 +922,17 @@ def test_o_handler_sai_do_logger_ao_fechar(app, tk_root):
     """Handler esquecido no logger global empurraria linhas para uma fila morta."""
     import logging
 
-    from vellum import desktop
+    from lauda import desktop
 
     janela = tkinter.Toplevel(tk_root)
     janela.withdraw()
-    outra = desktop.VellumApp(janela)
+    outra = desktop.LaudaApp(janela)
     handler = outra.log_handler
-    assert handler in logging.getLogger("vellum").handlers
+    assert handler in logging.getLogger("lauda").handlers
 
     outra.shutdown()
     janela.destroy()
-    assert handler not in logging.getLogger("vellum").handlers
+    assert handler not in logging.getLogger("lauda").handlers
 
 
 # --------------------------------------------------------------------------- #
@@ -982,7 +982,7 @@ def test_origem_sem_permissao_nao_derruba_o_trabalho(app, tmp_path: Path, monkey
     def sem_permissao(*_args, **_kwargs):
         raise OSError("acesso negado")
 
-    monkeypatch.setattr("vellum.desktop.shutil.copy2", sem_permissao)
+    monkeypatch.setattr("lauda.desktop.shutil.copy2", sem_permissao)
     assert app._copy_subtitles_beside_source(_resultado_falso(app, tmp_path)) == []
 
 
@@ -1036,8 +1036,8 @@ def test_as_copias_aparecem_na_lista_de_arquivos(app, tmp_path: Path):
 # Cobertura visível na janela (BACKLOG-015)
 # --------------------------------------------------------------------------- #
 def test_a_cobertura_aparece_no_resumo(app, tmp_path: Path):
-    from vellum.coverage import analyze_coverage
-    from vellum.types import SegmentInfo
+    from lauda.coverage import analyze_coverage
+    from lauda.types import SegmentInfo
 
     resultado = _resultado_falso(app, tmp_path, com_srt=False)
     resultado.segments = [SegmentInfo(id=0, start=0, end=30, text="oi")]
@@ -1051,8 +1051,8 @@ def test_a_cobertura_aparece_no_resumo(app, tmp_path: Path):
 
 def test_cobertura_baixa_vira_aviso_na_tela(app, tmp_path: Path):
     """O texto pode estar certo e ainda faltar metade do arquivo."""
-    from vellum.coverage import analyze_coverage
-    from vellum.types import SegmentInfo
+    from lauda.coverage import analyze_coverage
+    from lauda.types import SegmentInfo
 
     resultado = _resultado_falso(app, tmp_path, com_srt=False)
     resultado.segments = [
@@ -1094,7 +1094,7 @@ def test_o_interruptor_do_ollama_explica_o_que_faz(app):
 # Tempo restante e subtexto da etapa (BACKLOG-019 e 020)
 # --------------------------------------------------------------------------- #
 def test_duracao_em_linguagem_de_gente():
-    from vellum.desktop import _duration_pt
+    from lauda.desktop import _duration_pt
 
     assert _duration_pt(None) == "—"
     assert _duration_pt(0.2) == "1 s", "nunca prometer zero"
@@ -1126,7 +1126,7 @@ def test_a_estimativa_usa_o_ritmo_medido(app):
 def test_o_restante_aparece_no_status_e_na_trilha(app):
     import time as _time
 
-    from vellum.desktop import Progress
+    from lauda.desktop import Progress
 
     app._job_started = _time.monotonic() - 60
     app._on_progress(Progress(stage="asr", fraction=0.50, message=""))
@@ -1139,7 +1139,7 @@ def test_o_restante_aparece_no_status_e_na_trilha(app):
 def test_o_fim_limpa_a_estimativa(app, tmp_path: Path):
     import time as _time
 
-    from vellum.desktop import Progress
+    from lauda.desktop import Progress
 
     app._job_started = _time.monotonic() - 60
     app._on_progress(Progress(stage="asr", fraction=0.50, message=""))
@@ -1171,7 +1171,7 @@ def test_modelo_ausente_libera_o_botao_de_baixar(app):
 
 
 def test_modelo_certo_deixa_o_botao_travado(app):
-    from vellum.desktop import DEFAULT_OLLAMA_MODEL
+    from lauda.desktop import DEFAULT_OLLAMA_MODEL
 
     app._on_ollama(([DEFAULT_OLLAMA_MODEL], "ok"))
 
@@ -1308,7 +1308,7 @@ def test_a_pagina_arquivos_comeca_com_o_convite(app):
 def test_o_trabalho_terminado_entra_no_historico(app, tmp_path: Path):
     from tests_helpers import make_result
 
-    from vellum import history
+    from lauda import history
 
     app._on_done(make_result())
 
@@ -1321,9 +1321,9 @@ def test_o_trabalho_terminado_entra_no_historico(app, tmp_path: Path):
 
 
 def test_o_erro_tambem_entra_no_historico(app, silent_video: Path, monkeypatch):
-    from vellum import history
+    from lauda import history
 
-    monkeypatch.setattr("vellum.desktop.messagebox.showerror", lambda *a: None)
+    monkeypatch.setattr("lauda.desktop.messagebox.showerror", lambda *a: None)
     app._accept_file(silent_video)
 
     app._on_error("ffprobe não encontrado")
@@ -1337,7 +1337,7 @@ def test_o_erro_tambem_entra_no_historico(app, silent_video: Path, monkeypatch):
 def test_erro_no_meio_da_fila_nao_para_os_outros(
     app, silent_video: Path, tone_wav: Path, monkeypatch
 ):
-    monkeypatch.setattr("vellum.desktop.messagebox.showerror", lambda *a: None)
+    monkeypatch.setattr("lauda.desktop.messagebox.showerror", lambda *a: None)
     chamadas: list[Path] = []
     app._accept_files([silent_video, tone_wav])
     app.start = lambda: chamadas.append(app.input_path)  # type: ignore[method-assign]
@@ -1350,10 +1350,10 @@ def test_erro_no_meio_da_fila_nao_para_os_outros(
 def test_limpar_o_historico_esvazia_a_pagina(app, monkeypatch):
     from tests_helpers import make_result
 
-    from vellum import history
+    from lauda import history
 
     app._on_done(make_result())
-    monkeypatch.setattr("vellum.desktop.messagebox.askokcancel", lambda *a: True)
+    monkeypatch.setattr("lauda.desktop.messagebox.askokcancel", lambda *a: True)
 
     app.clear_history()
 
@@ -1366,10 +1366,10 @@ def test_limpar_o_historico_esvazia_a_pagina(app, monkeypatch):
 def test_limpar_o_historico_respeita_o_cancelar(app, monkeypatch):
     from tests_helpers import make_result
 
-    from vellum import history
+    from lauda import history
 
     app._on_done(make_result())
-    monkeypatch.setattr("vellum.desktop.messagebox.askokcancel", lambda *a: False)
+    monkeypatch.setattr("lauda.desktop.messagebox.askokcancel", lambda *a: False)
 
     app.clear_history()
 
@@ -1379,7 +1379,7 @@ def test_limpar_o_historico_respeita_o_cancelar(app, monkeypatch):
 def test_abrir_o_laudo_do_historico_avisa_quando_nao_ha(app, monkeypatch):
     avisos: list[str] = []
     monkeypatch.setattr(
-        "vellum.desktop.messagebox.showinfo",
+        "lauda.desktop.messagebox.showinfo",
         lambda title, message: avisos.append(message),
     )
     app.open_history_report()
@@ -1388,7 +1388,7 @@ def test_abrir_o_laudo_do_historico_avisa_quando_nao_ha(app, monkeypatch):
 
 
 def test_abrir_o_laudo_do_historico_usa_o_mais_recente(app, tmp_path: Path, monkeypatch):
-    from vellum import history
+    from lauda import history
 
     laudo = tmp_path / "laudo.report.txt"
     laudo.write_text("conteúdo", encoding="utf-8")
@@ -1454,7 +1454,7 @@ def test_a_rodada_seguinte_le_a_tela_de_novo(app, silent_video: Path):
 
 # --------------------------------------------- página Desempenho (028/029) --
 def _maquina(app, *, cuda: bool, vram=4.0, ram=16.0, nucleos=16):
-    from vellum.hardware import Finding, HardwareInfo, MachineCheck
+    from lauda.hardware import Finding, HardwareInfo, MachineCheck
 
     hardware = HardwareInfo(
         has_cuda=cuda, cuda_device_count=1 if cuda else 0,
@@ -1482,7 +1482,7 @@ def test_desempenho_tem_tres_abas(app):
 
 
 def test_o_preset_muda_os_quatro_controles(app):
-    from vellum.limits import preset_by_key
+    from lauda.limits import preset_by_key
 
     app.apply_preset("leve")
 
@@ -1621,7 +1621,7 @@ def test_o_tamanho_da_legenda_chega_ao_processamento(app, silent_video: Path):
 
 
 def test_o_tamanho_da_legenda_comeca_no_equilibrado(app):
-    from vellum.cues import DEFAULT_DENSITY, DENSITY_LABELS
+    from lauda.cues import DEFAULT_DENSITY, DENSITY_LABELS
 
     assert app._selected(app.density_var, DENSITY_LABELS) == DEFAULT_DENSITY
 

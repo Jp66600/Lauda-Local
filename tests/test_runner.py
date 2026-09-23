@@ -15,10 +15,10 @@ from pathlib import Path
 
 import pytest
 
-from vellum import runner
-from vellum.config import JobOptions
-from vellum.limits import ResourceLimits
-from vellum.runner import RecoveryFailed, _degrade, run_with_recovery
+from lauda import runner
+from lauda.config import JobOptions
+from lauda.limits import ResourceLimits
+from lauda.runner import RecoveryFailed, _degrade, run_with_recovery
 
 
 @pytest.fixture()
@@ -247,12 +247,12 @@ def test_as_opcoes_rebaixadas_chegam_ao_filho(entrada: Path, tmp_path: Path, mon
 
 def test_o_worker_do_executavel_empacotado_chama_a_si_mesmo(monkeypatch, tmp_path):
     """No .exe não há `python -m`: o próprio aplicativo assume o papel."""
-    from vellum.runner import _worker_command
+    from lauda.runner import _worker_command
 
-    monkeypatch.setattr("vellum.runner.sys.frozen", True, raising=False)
-    monkeypatch.setattr("vellum.runner.sys.executable", r"C:\App\Vellum.exe")
+    monkeypatch.setattr("lauda.runner.sys.frozen", True, raising=False)
+    monkeypatch.setattr("lauda.runner.sys.executable", r"C:\App\Lauda Local.exe")
 
     comando = _worker_command(tmp_path / "job.json")
-    assert comando[0].endswith("Vellum.exe")
+    assert comando[0].endswith("Lauda Local.exe")
     assert "--worker" in comando
     assert "-m" not in comando, "o executável empacotado não entende -m"

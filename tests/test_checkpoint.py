@@ -6,10 +6,10 @@ import json
 import time
 from pathlib import Path
 
-from vellum import checkpoint as cp
-from vellum.checkpoint import CheckpointStore, job_key, options_fingerprint, purge_old
-from vellum.config import JobOptions
-from vellum.types import (
+from lauda import checkpoint as cp
+from lauda.checkpoint import CheckpointStore, job_key, options_fingerprint, purge_old
+from lauda.config import JobOptions
+from lauda.types import (
     AudioDiagnostics,
     JobResult,
     LanguageInfo,
@@ -64,7 +64,7 @@ def test_pedir_legenda_nao_invalida(tmp_path: Path):
 
 
 def test_desligar_a_gpu_invalida_porque_muda_o_resultado(tmp_path: Path):
-    from vellum.limits import ResourceLimits
+    from lauda.limits import ResourceLimits
 
     a = options_fingerprint(_options(tmp_path))
     b = options_fingerprint(_options(tmp_path, limits=ResourceLimits(gpu_percent=0)))

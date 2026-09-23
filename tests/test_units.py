@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from vellum.report import render_plain_transcript, render_report
-from vellum.subtitles import render_srt, render_vtt
-from vellum.textstats import compute_stats, tokenize
-from vellum.types import (
+from lauda.report import render_plain_transcript, render_report
+from lauda.subtitles import render_srt, render_vtt
+from lauda.textstats import compute_stats, tokenize
+from lauda.types import (
     AudioDiagnostics,
     JobResult,
     LanguageInfo,
@@ -14,7 +14,7 @@ from vellum.types import (
     SegmentInfo,
     SourceInfo,
 )
-from vellum.utils import format_srt_time, format_timestamp, human_size, safe_stem
+from lauda.utils import format_srt_time, format_timestamp, human_size, safe_stem
 
 
 # --------------------------------------------------------------------------- #
@@ -103,7 +103,7 @@ def _job_result() -> JobResult:
         ),
         probe=ProbeResult(format_name="mov,mp4", duration=5.0, bit_rate=128000, nb_streams=1),
         processing=ProcessingInfo(
-            app_name="Vellum",
+            app_name="Lauda Local",
             app_version="0.2.0",
             engine="faster-whisper",
             engine_version="1.2.1",

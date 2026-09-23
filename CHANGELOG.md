@@ -2,19 +2,34 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.10.0-beta] — 2026-09-23
+
+### Mudado
+
+- **O projeto passou a se chamar Lauda Local.** *Lauda* é a página padrão de
+  texto — o que o programa entrega — e *Local* é a promessa que ele cumpre. O
+  pacote Python virou `lauda`, o executável `Lauda Local.exe`, os comandos
+  `lauda` e `lauda-app`, e o perfil do usuário `~/.lauda`.
+- **A migração de perfil agora conhece os dois nomes anteriores**: na primeira
+  abertura, `~/.vellum` ou `~/.mediaintel` (preferências, histórico e pontos de
+  retomada) é **copiado** para `~/.lauda`, sem apagar a pasta antiga.
+- **O instalador remove sozinho as duas versões anteriores** — Vellum e
+  MediaIntel Local —, para não sobrar programa repetido na lista.
+- O prefixo de variáveis de ambiente é `LAUDA_`; os antigos `VELLUM_` e
+  `MEDIAINTEL_` continuam sendo lidos.
+
 ## [0.9.0-beta] — 2026-09-08
 
 ### Mudado
 
 - **O projeto passou a se chamar Vellum.** Antes era MediaIntel Local. O pacote
-  Python virou `vellum`, o executável `Vellum.exe`, os comandos `vellum` e
-  `vellum-app`, e o perfil do usuário `~/.vellum`.
+  Python virou `vellum`, o executável `Vellum.exe` e o perfil do usuário
+  `~/.vellum`.
 - **Migração automática do perfil antigo**: na primeira abertura, `~/.mediaintel`
-  (preferências, histórico e pontos de retomada) é **copiado** para `~/.vellum`,
-  sem apagar a pasta antiga. O instalador remove a versão anterior sozinho.
-- O prefixo de variáveis de ambiente é `VELLUM_`; o antigo `MEDIAINTEL_`
-  continua sendo lido.
-- No aplicativo empacotado, os modelos passaram a ficar em `~/.vellum/models`:
+  (preferências, histórico e pontos de retomada) é **copiado** para o perfil
+  novo, sem apagar a pasta antiga. O instalador remove a versão anterior
+  sozinho.
+- No aplicativo empacotado, os modelos passaram a ficar no perfil do usuário:
   desinstalar e reinstalar não obriga mais a baixar tudo de novo.
 - **A página Desempenho virou três abas**: Resumo (quatro presets com nome
   comum), Limites (os quatro controles finos) e Diagnóstico (o que foi medido,
@@ -48,7 +63,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - **Fila de arquivos serial**: solte vários de uma vez; eles rodam um por vez.
   Soltar durante um trabalho põe no fim da fila, e um arquivo com erro não para
   os outros. A fila inteira usa as opções de quando você clicou em Processar.
-- **Histórico** na página Arquivos, em `~/.vellum/history.json`: quando,
+- **Histórico** na página Arquivos, em `~/.lauda/history.json`: quando,
   duração, qualidade, CPU ou GPU, velocidade, cobertura, avisos e a confiança da
   transcrição, com destaque para o que merece um olhar.
 - Seção Ollama em Configurações: status, verificação e download do modelo com

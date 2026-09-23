@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import logging
 
-from vellum.coverage import (
+from lauda.coverage import (
     analyze_coverage,
     invert_spans,
     merge_spans,
     overlap_seconds,
 )
-from vellum.types import SegmentInfo
+from lauda.types import SegmentInfo
 
 
 def seg(start: float, end: float) -> SegmentInfo:
@@ -91,14 +91,14 @@ def test_sem_duracao_nao_inventa_numero():
 
 def test_cobertura_baixa_avisa_no_log(caplog):
     """É o guardrail: o trecho perdido tem de gritar em algum lugar."""
-    with caplog.at_level(logging.WARNING, logger="vellum.coverage"):
+    with caplog.at_level(logging.WARNING, logger="lauda.coverage"):
         analyze_coverage([seg(0, 10), seg(80, 90)], duration=90)
 
     assert any("Cobertura" in registro.message for registro in caplog.records)
 
 
 def test_cobertura_boa_nao_polui_o_log(caplog):
-    with caplog.at_level(logging.WARNING, logger="vellum.coverage"):
+    with caplog.at_level(logging.WARNING, logger="lauda.coverage"):
         analyze_coverage([seg(0, 30)], duration=30)
 
     assert caplog.records == []
@@ -123,7 +123,7 @@ def test_o_buraco_plantado_aparece_no_relatorio():
     """
     from tests_helpers import make_result
 
-    from vellum.report import render_report
+    from lauda.report import render_report
 
     resultado = make_result()
     resultado.probe.duration = 90.0
@@ -141,7 +141,7 @@ def test_relatorio_sem_medida_diz_por_que():
     """Bloco que falha vira [INDISPONÍVEL] com o motivo, nunca some."""
     from tests_helpers import make_result
 
-    from vellum.report import render_report
+    from lauda.report import render_report
 
     resultado = make_result()
     resultado.coverage = analyze_coverage(resultado.segments, duration=None)

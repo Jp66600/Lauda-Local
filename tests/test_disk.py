@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vellum.disk import (
+from lauda.disk import (
     component_sizes,
     format_size,
     installed_models,

@@ -1,9 +1,9 @@
-VELLUM — LICENÇAS
+LAUDA LOCAL — LICENÇAS
 ===========================
 
 O aplicativo
 ------------
-Vellum é distribuído sob a licença MIT.
+Lauda Local é distribuído sob a licença MIT.
 
     Permissão é concedida, gratuitamente, a qualquer pessoa que obtenha uma
     cópia deste software e dos arquivos de documentação associados, para lidar

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from vellum.hardware import (
+from lauda.hardware import (
     Finding,
     HardwareInfo,
     MachineCheck,
@@ -35,12 +35,12 @@ def maquina(**kwargs) -> HardwareInfo:
 
 @pytest.fixture()
 def com_ffmpeg(monkeypatch):
-    monkeypatch.setattr("vellum.hardware.resolve_tools", lambda: None)
+    monkeypatch.setattr("lauda.hardware.resolve_tools", lambda: None)
 
 
 @pytest.fixture()
 def disco_cheio(monkeypatch):
-    monkeypatch.setattr("vellum.hardware._free_disk_gb", lambda _p: 50.0)
+    monkeypatch.setattr("lauda.hardware._free_disk_gb", lambda _p: 50.0)
 
 
 # --------------------------------------------------------------------------- #
@@ -86,7 +86,7 @@ def test_sem_ffmpeg_o_veredito_e_ruim(monkeypatch, disco_cheio):
     def sem_ffmpeg():
         raise RuntimeError("nao achei")
 
-    monkeypatch.setattr("vellum.hardware.resolve_tools", sem_ffmpeg)
+    monkeypatch.setattr("lauda.hardware.resolve_tools", sem_ffmpeg)
     check = assess_machine(maquina(cpu_count=16, ram_gb=64.0))
 
     assert check.level == "ruim", "sem ffmpeg nada funciona, por melhor que seja a máquina"
@@ -94,7 +94,7 @@ def test_sem_ffmpeg_o_veredito_e_ruim(monkeypatch, disco_cheio):
 
 
 def test_pouco_disco_pesa_no_veredito(com_ffmpeg, monkeypatch):
-    monkeypatch.setattr("vellum.hardware._free_disk_gb", lambda _p: 0.4)
+    monkeypatch.setattr("lauda.hardware._free_disk_gb", lambda _p: 0.4)
     check = assess_machine(maquina(cpu_count=12, ram_gb=32.0))
 
     assert check.level == "ruim"
@@ -141,13 +141,13 @@ def test_findings_e_check_sao_imutaveis():
 
 # ------------------------------------------ memória recomendada por job ----
 def test_recomendacao_cresce_com_o_modelo():
-    from vellum.hardware import recommended_for
+    from lauda.hardware import recommended_for
 
     assert recommended_for("tiny").ram_gb < recommended_for("large-v3").ram_gb
 
 
 def test_quem_fala_pesa_na_recomendacao():
-    from vellum.hardware import DIARIZE_RAM_GB, recommended_for
+    from lauda.hardware import DIARIZE_RAM_GB, recommended_for
 
     sem = recommended_for("small").ram_gb
     com = recommended_for("small", diarize=True).ram_gb
@@ -155,7 +155,7 @@ def test_quem_fala_pesa_na_recomendacao():
 
 
 def test_o_ollama_vira_nota_e_nao_orcamento():
-    from vellum.hardware import recommended_for
+    from lauda.hardware import recommended_for
 
     pedido = recommended_for("small", summarize=True)
     assert pedido.ram_gb == recommended_for("small").ram_gb, "ele roda noutro processo"
@@ -163,14 +163,14 @@ def test_o_ollama_vira_nota_e_nao_orcamento():
 
 
 def test_a_vram_pedida_inclui_a_reserva_do_cuda():
-    from vellum.hardware import MODEL_MEMORY_GB, recommended_for
+    from lauda.hardware import MODEL_MEMORY_GB, recommended_for
 
     pedido = recommended_for("medium")
     assert pedido.vram_gb > MODEL_MEMORY_GB["medium"]
 
 
 def test_o_diagnostico_carrega_o_hardware_medido():
-    from vellum.hardware import HardwareInfo, assess_machine
+    from lauda.hardware import HardwareInfo, assess_machine
 
     hardware = HardwareInfo(
         has_cuda=False, cuda_device_count=0, gpu_name=None, gpu_vram_gb=None,

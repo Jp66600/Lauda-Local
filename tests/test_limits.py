@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from vellum.config import JobOptions
-from vellum.hardware import HardwareInfo, memory_budget_gb, select_runtime
-from vellum.limits import DEFAULT, ResourceLimits, from_dict, load, save
+from lauda.config import JobOptions
+from lauda.hardware import HardwareInfo, memory_budget_gb, select_runtime
+from lauda.limits import DEFAULT, ResourceLimits, from_dict, load, save
 
 HARDWARE = HardwareInfo(
     has_cuda=True,
@@ -133,7 +133,7 @@ def test_limites_ficam_guardados():
 
 
 def test_arquivo_corrompido_volta_ao_padrao():
-    from vellum import theme
+    from lauda import theme
 
     theme.PREFS_PATH.parent.mkdir(parents=True, exist_ok=True)
     theme.PREFS_PATH.write_text("{quebrado", encoding="utf-8")
@@ -154,7 +154,7 @@ def test_descricao_em_portugues():
 
 # ------------------------------------------------------------- presets ----
 def test_os_quatro_presets_existem_e_sao_distintos():
-    from vellum.limits import PRESETS
+    from lauda.limits import PRESETS
 
     chaves = [p.key for p in PRESETS]
     assert chaves == ["leve", "equilibrado", "rapido", "maximo"]
@@ -162,7 +162,7 @@ def test_os_quatro_presets_existem_e_sao_distintos():
 
 
 def test_preset_leve_desliga_a_gpu_e_segura_a_cpu():
-    from vellum.limits import preset_by_key
+    from lauda.limits import preset_by_key
 
     leve = preset_by_key("leve")
     assert leve is not None
@@ -171,14 +171,14 @@ def test_preset_leve_desliga_a_gpu_e_segura_a_cpu():
 
 
 def test_preset_rapido_e_o_padrao_de_fabrica():
-    from vellum.limits import DEFAULT, preset_by_key
+    from lauda.limits import DEFAULT, preset_by_key
 
     rapido = preset_by_key("rapido")
     assert rapido is not None and rapido.limits == DEFAULT
 
 
 def test_reconhece_o_preset_em_vigor():
-    from vellum.limits import PRESETS, preset_for
+    from lauda.limits import PRESETS, preset_for
 
     for preset in PRESETS:
         achado = preset_for(preset.limits)
@@ -186,19 +186,19 @@ def test_reconhece_o_preset_em_vigor():
 
 
 def test_ajuste_manual_nao_casa_com_preset():
-    from vellum.limits import ResourceLimits, preset_for
+    from lauda.limits import ResourceLimits, preset_for
 
     assert preset_for(ResourceLimits(cpu_percent=37, ram_percent=41)) is None
 
 
 def test_chave_desconhecida_devolve_nada():
-    from vellum.limits import preset_by_key
+    from lauda.limits import preset_by_key
 
     assert preset_by_key("turbo") is None
 
 
 def test_cada_preset_explica_o_que_faz():
-    from vellum.limits import PRESETS
+    from lauda.limits import PRESETS
 
     for preset in PRESETS:
         assert len(preset.blurb) > 30, f"{preset.key} sem explicação em português"

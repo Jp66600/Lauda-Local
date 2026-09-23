@@ -1,4 +1,4 @@
-# Como contribuir com o Vellum
+# Como contribuir com o Lauda Local
 
 Obrigado por aparecer. Este é um projeto pequeno e opinativo: um aplicativo que
 transforma áudio e vídeo em laudo de texto **sem que um byte saia da máquina**.
@@ -16,8 +16,8 @@ Precisa de **Python 3.12** (3.11 a 3.13 funcionam; 3.14 não — ainda não há
 *wheels* do CTranslate2) e do **ffmpeg** no PATH.
 
 ```bash
-git clone https://github.com/Jp66600/vellum.git
-cd vellum
+git clone https://github.com/Jp66600/lauda-local.git
+cd lauda-local
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1        # no Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
@@ -34,8 +34,8 @@ python scripts/make_test_media.py
 Rodar o aplicativo e a suíte:
 
 ```bash
-python -m vellum.desktop          # a janela
-python -m vellum run entrada.mp4 -o saida
+python -m lauda.desktop          # a janela
+python -m lauda run entrada.mp4 -o saida
 python -m pytest tests -q
 ```
 
@@ -113,9 +113,9 @@ regressão, não escolha de estilo. A versão longa está em
 
 - **`ARCHITECTURE.md`** — o mapa: onde fica cada coisa e como um trabalho corre
   do começo ao fim. Leia antes de propor mudança grande.
-- **`docs/Vellum-Front-End.pdf`** — a interface por dentro (é Tkinter, não
+- **`docs/Lauda-Local-Front-End.pdf`** — a interface por dentro (é Tkinter, não
   existe HTML/CSS/React em lugar nenhum).
-- **`docs/Vellum-Decisoes-Tecnicas.pdf`** — o porquê de cada escolha, incluindo
+- **`docs/Lauda-Local-Decisoes-Tecnicas.pdf`** — o porquê de cada escolha, incluindo
   as que foram recusadas e por quê.
 
 Issues marcadas com `bom primeiro item` são as de escopo pequeno e contido.
@@ -127,7 +127,7 @@ Issues marcadas com `bom primeiro item` são as de escopo pequeno e contido.
 O que mais ajuda, nesta ordem:
 
 1. O **laudo** (`*.report.txt`) — ele traz modelo, device, cobertura e avisos.
-2. Os **logs**, em `~/.vellum/logs/` (`vellum.log` e `vellum-worker.log`).
+2. Os **logs**, em `~/.lauda/logs/` (`lauda.log` e `lauda-worker.log`).
 3. O **diagnóstico da máquina** (página Desempenho → aba Diagnóstico).
 4. O arquivo de mídia, **se você puder compartilhá-lo**. Se não puder, diga
    apenas a duração, o idioma e se tem música ou ruído de fundo — já ajuda.

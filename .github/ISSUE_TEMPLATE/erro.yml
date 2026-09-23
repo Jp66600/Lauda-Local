@@ -24,7 +24,7 @@ body:
     attributes:
       label: Como repetir
       placeholder: |
-        1. Abri o Vellum
+        1. Abri o Lauda Local
         2. Arrastei o arquivo
         3. Liguei "Diarização de falantes"
         4. Cliquei em Processar
@@ -65,8 +65,8 @@ body:
     attributes:
       label: Log
       description: >
-        `~/.vellum/logs/vellum.log` e `vellum-worker.log` (no Windows,
-        `C:\Users\<você>\.vellum\logs`). Cole as últimas linhas ou anexe os
+        `~/.lauda/logs/lauda.log` e `lauda-worker.log` (no Windows,
+        `C:\Users\<você>\.lauda\logs`). Cole as últimas linhas ou anexe os
         arquivos.
       render: text
 

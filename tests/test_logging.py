@@ -17,8 +17,8 @@ import pytest
 @pytest.fixture()
 def logging_isolado(tmp_path: Path, monkeypatch):
     """Recarrega o módulo apontando o log para uma pasta descartável."""
-    monkeypatch.setenv("VELLUM_LOG_DIR", str(tmp_path / "logs"))
-    from vellum import logging_setup
+    monkeypatch.setenv("LAUDA_LOG_DIR", str(tmp_path / "logs"))
+    from lauda import logging_setup
 
     modulo = importlib.reload(logging_setup)
     raiz = logging.getLogger()
@@ -81,7 +81,7 @@ def test_o_arquivo_gira_e_nao_cresce_sem_limite(logging_isolado, monkeypatch):
         log.info("linha de enchimento numero %d com algum texto junto", indice)
 
     pasta = logging_isolado.LOG_DIR
-    arquivos = sorted(pasta.glob("vellum.log*"))
+    arquivos = sorted(pasta.glob("lauda.log*"))
     assert len(arquivos) > 1, "com o limite estourado tem de haver arquivo de reserva"
     assert len(arquivos) <= logging_isolado._LOG_BACKUPS + 1, "e não pode passar disso"
 
@@ -124,7 +124,7 @@ def test_o_barulho_de_terceiros_nao_entope_o_arquivo(logging_isolado):
     """Com o arquivo em DEBUG, uma biblioteca falante apagaria o que importa."""
     _configurar(logging_isolado, quiet=True)
     logging.getLogger("PIL.PngImagePlugin").debug("STREAM b'IHDR' 16 13")
-    logging.getLogger("vellum.pipeline").debug("etapa que interessa")
+    logging.getLogger("lauda.pipeline").debug("etapa que interessa")
 
     conteudo = logging_isolado.LOG_PATH.read_text(encoding="utf-8")
     assert "etapa que interessa" in conteudo

@@ -1,6 +1,6 @@
-# Vellum
+# Lauda Local
 
-[![CI](https://github.com/Jp66600/vellum/actions/workflows/ci.yml/badge.svg)](https://github.com/Jp66600/vellum/actions/workflows/ci.yml)
+[![CI](https://github.com/Jp66600/lauda-local/actions/workflows/ci.yml/badge.svg)](https://github.com/Jp66600/lauda-local/actions/workflows/ci.yml)
 [![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Windows · Linux · macOS](https://img.shields.io/badge/windows%20%C2%B7%20linux%20%C2%B7%20macOS-lightgrey.svg)](#pré-requisitos)
@@ -13,27 +13,25 @@ diagnóstico do áudio, idioma detectado e transcrição com timestamps — mais
 Nenhum byte do seu arquivo sai da máquina. Nenhuma API paga. Os modelos são
 baixados uma vez e reutilizados offline para sempre.
 
-> O projeto se chamava **MediaIntel Local** até a versão 0.8.0-beta. Só o nome
-> mudou. Quem já usava não perde nada: na primeira abertura o perfil
-> `~/.mediaintel` é copiado para `~/.vellum`, o instalador remove a versão
-> antiga sozinho, e a pasta do código-fonte continua sendo `mediaintel-local`
-> (renomeá-la quebraria os dois ambientes virtuais, que guardam caminhos
-> absolutos).
+> O projeto se chamou **MediaIntel Local** (até a 0.8.0-beta) e **Vellum** (na
+> 0.9.0-beta). Só o nome mudou. Quem já usava não perde nada: na primeira
+> abertura o perfil antigo — `~/.vellum` ou `~/.mediaintel` — é copiado para
+> `~/.lauda`, e o instalador remove as versões anteriores sozinho.
 
-> **Guia rápido (3 páginas)**: [docs/Vellum-Guia-Rapido.pdf](docs/Vellum-Guia-Rapido.pdf)
+> **Guia rápido (3 páginas)**: [docs/Lauda-Local-Guia-Rapido.pdf](docs/Lauda-Local-Guia-Rapido.pdf)
 > — o passo a passo para quem só quer transcrever um arquivo.
 >
-> **Manual completo (16 páginas)**: [docs/Vellum-Manual.pdf](docs/Vellum-Manual.pdf)
+> **Manual completo (16 páginas)**: [docs/Lauda-Local-Manual.pdf](docs/Lauda-Local-Manual.pdf)
 > — cada tela, cada opção e o que fazer quando algo dá errado.
 >
-> **Decisões técnicas (14 páginas)**: [docs/Vellum-Decisoes-Tecnicas.pdf](docs/Vellum-Decisoes-Tecnicas.pdf)
+> **Decisões técnicas (14 páginas)**: [docs/Lauda-Local-Decisoes-Tecnicas.pdf](docs/Lauda-Local-Decisoes-Tecnicas.pdf)
 > — arquitetura, o porquê de cada escolha, as medições e os limites assumidos.
 > É a leitura para quem vai mexer no código.
 >
 > **Arquitetura**: [ARCHITECTURE.md](ARCHITECTURE.md) — o mapa curto para quem
 > chega agora: onde fica cada coisa, como um trabalho corre e o que não se mexe.
 >
-> **Front-end (14 páginas)**: [docs/Vellum-Front-End.pdf](docs/Vellum-Front-End.pdf)
+> **Front-end (14 páginas)**: [docs/Lauda-Local-Front-End.pdf](docs/Lauda-Local-Front-End.pdf)
 > — como a interface foi construída e como escrever um prompt que a altere sem
 > quebrar o resto: vocabulário, restrições e exemplos prontos para colar.
 
@@ -92,8 +90,8 @@ winget install --id Gyan.FFmpeg -e
 Se preferir não mexer no PATH, aponte os binários no `.env`:
 
 ```
-VELLUM_FFMPEG=C:\ffmpeg\bin\ffmpeg.exe
-VELLUM_FFPROBE=C:\ffmpeg\bin\ffprobe.exe
+LAUDA_FFMPEG=C:\ffmpeg\bin\ffmpeg.exe
+LAUDA_FFPROBE=C:\ffmpeg\bin\ffprobe.exe
 ```
 
 ---
@@ -103,14 +101,14 @@ VELLUM_FFPROBE=C:\ffmpeg\bin\ffprobe.exe
 ### Baixar
 
 Quem só quer **usar** no Windows: pegue o instalador em
-[Releases](https://github.com/Jp66600/vellum/releases) — ele traz tudo dentro,
+[Releases](https://github.com/Jp66600/lauda-local/releases) — ele traz tudo dentro,
 inclusive o ffmpeg, e não precisa de Python.
 
 Quem quer **mexer no código**:
 
 ```bash
-git clone https://github.com/Jp66600/vellum.git
-cd vellum
+git clone https://github.com/Jp66600/lauda-local.git
+cd lauda-local
 ```
 
 ### Windows (PowerShell)
@@ -153,8 +151,8 @@ Crie o atalho uma única vez:
 powershell -ExecutionPolicy Bypass -File scripts\create_shortcut.ps1
 ```
 
-Isso põe **Vellum** na Área de Trabalho, com ícone próprio, apontando
-direto para `vellum-app.exe`. Dois cliques abrem uma **janela nativa** — não
+Isso põe **Lauda Local** na Área de Trabalho, com ícone próprio, apontando
+direto para `lauda-app.exe`. Dois cliques abrem uma **janela nativa** — não
 é site, não abre navegador e não fica console preto atrás. Use `-StartMenu` para
 criar também no Menu Iniciar, ou `-NoDesktop` para só lá.
 
@@ -174,10 +172,10 @@ você clicou em Processar. O **tamanho das legendas** é escolha sua — curtas
 (1–2 s), equilibradas (5–8 s, o padrão) ou blocos longos —, e não mais um
 acidente de como o modelo cortou os trechos. A página **Arquivos** guarda o
 **histórico** de todos os trabalhos (duração, qualidade, CPU ou GPU, velocidade,
-cobertura, avisos e confiança), em `~/.vellum/history.json`.
+cobertura, avisos e confiança), em `~/.lauda/history.json`.
 
 O arrastar-e-soltar precisa do extra `desktop`
-(`pip install "vellum[desktop]"`). Sem ele a área continua funcionando
+(`pip install "lauda[desktop]"`). Sem ele a área continua funcionando
 pelo clique, e o texto muda para não prometer o que não faz.
 
 **Diagnóstico na abertura**: ao abrir, o aplicativo olha processador, memória,
@@ -185,18 +183,18 @@ placa de vídeo, espaço em disco e a presença do ffmpeg. O veredito fica na p�
 **Desempenho**; se a máquina for fraca demais, aparece um aviso com o que foi
 medido, o caminho dos controles de desempenho e a escolha entre **fechar o
 aplicativo** e **continuar mesmo assim**. Dá para marcar "não avisar de novo" —
-fica guardado em `~/.vellum/ui.json`.
+fica guardado em `~/.lauda/ui.json`.
 
 **As escolhas ficam guardadas**: idioma, qualidade, os interruptores de recurso
-e a pasta de saída voltam como você deixou, em `~/.vellum/ui.json`. A página
+e a pasta de saída voltam como você deixou, em `~/.lauda/ui.json`. A página
 **Configurações** resume o que está guardado e tem o botão **Restaurar padrões**;
 o passo a passo mudou para a página **Ajuda**.
 
 **Enquanto processa, a página Relatório mostra o registro ao vivo** — arquivo,
 modelo, device e cada etapa, conforme acontecem. Ao terminar ela passa a mostrar
 o laudo, e o botão **Ver o registro** volta para o que aconteceu. Tudo também vai
-para `~/.vellum/logs/`; o processo que faz o trabalho pesado escreve num
-arquivo separado (`vellum-worker.log`), porque dois processos girando o mesmo
+para `~/.lauda/logs/`; o processo que faz o trabalho pesado escreve num
+arquivo separado (`lauda-worker.log`), porque dois processos girando o mesmo
 arquivo rotativo dá erro no Windows.
 
 **Tempo restante**: depois de 8% do trabalho o app passa a dizer quanto falta,
@@ -213,21 +211,21 @@ uma cópia da legenda ao lado do vídeo — é isso que faz o player achá-la so
 As duas vêm ligadas; a cópia na pasta de saída continua onde estava.
 
 **Modo escuro**: o botão na página **Configurações** alterna claro/escuro, e a
-escolha fica guardada em `~/.vellum/ui.json`. Sem escolha salva, o app segue
+escolha fica guardada em `~/.lauda/ui.json`. Sem escolha salva, o app segue
 o tema do Windows. Também dá para forçar na abertura:
 
 ```bash
-.\.venv\Scripts\vellum.exe app --theme escuro
+.\.venv\Scripts\lauda.exe app --theme escuro
 ```
 
 Pelo terminal, a mesma janela:
 
 ```bash
-.\.venv\Scripts\vellum.exe app
+.\.venv\Scripts\lauda.exe app
 ```
 
 A interface de navegador (Gradio) continua existindo como alternativa —
-`vellum ui` — útil para acessar de outro computador da rede local.
+`lauda ui` — útil para acessar de outro computador da rede local.
 
 ---
 
@@ -236,7 +234,7 @@ A interface de navegador (Gradio) continua existindo como alternativa —
 **1. Cheque o ambiente:**
 
 ```bash
-vellum doctor
+lauda doctor
 ```
 
 Ele mostra ffmpeg, GPU/VRAM, RAM, modelos em cache e por que a diarização está
@@ -251,13 +249,13 @@ python scripts/make_test_media.py
 **3. Processe:**
 
 ```bash
-vellum run tests/_media/tone.wav --model tiny --output ./saida
+lauda run tests/_media/tone.wav --model tiny --output ./saida
 ```
 
 **4. Um caso real, com legendas e timestamps por palavra:**
 
 ```bash
-vellum run "C:\videos\entrevista.mp4" -m small -l pt --srt --vtt --words -o .\saida
+lauda run "C:\videos\entrevista.mp4" -m small -l pt --srt --vtt --words -o .\saida
 ```
 
 Saída em `./saida`:
@@ -274,7 +272,7 @@ entrevista.srt / .vtt      legendas (se pedidas)
 ## Comandos
 
 ```bash
-vellum run <arquivo> [opções]
+lauda run <arquivo> [opções]
 ```
 
 | Opção | Padrão | Para que serve |
@@ -313,18 +311,18 @@ vellum run <arquivo> [opções]
 Outros comandos:
 
 ```bash
-vellum app          # aplicativo em janela própria (o normal)
-vellum doctor       # diagnóstico do ambiente
-vellum models       # tabela de modelos e o que cabe na sua máquina
-vellum checkpoints  # trabalhos interrompidos que dá para retomar
-vellum disco        # quanto ocupa em disco e o que dá para liberar
-vellum ui           # interface no navegador (alternativa, precisa do Gradio)
+lauda app          # aplicativo em janela própria (o normal)
+lauda doctor       # diagnóstico do ambiente
+lauda models       # tabela de modelos e o que cabe na sua máquina
+lauda checkpoints  # trabalhos interrompidos que dá para retomar
+lauda disco        # quanto ocupa em disco e o que dá para liberar
+lauda ui           # interface no navegador (alternativa, precisa do Gradio)
 ```
 
 ### Interface local
 
 ```bash
-pip install "vellum[ui]"; vellum ui
+pip install "lauda[ui]"; lauda ui
 ```
 
 A UI abre em `http://127.0.0.1:7860` e traz arrastar-e-soltar, seletor de
@@ -363,10 +361,10 @@ mudam de verdade qual modelo é carregado.
 Pela linha de comando:
 
 ```bash
-vellum run entrevista.mp4 --cpu 50 --gpu 0
+lauda run entrevista.mp4 --cpu 50 --gpu 0
 ```
 
-A escolha feita na janela fica salva em `~/.vellum/ui.json`.
+A escolha feita na janela fica salva em `~/.lauda/ui.json`.
 
 ---
 
@@ -386,7 +384,7 @@ O faster-whisper sabe transcrever em lotes. Medimos, no mesmo áudio de 5 minuto
 trecho. Por isso o modo rápido é **opt-in** e nunca o padrão:
 
 ```bash
-vellum run entrevista.mp4 --batch-size 16
+lauda run entrevista.mp4 --batch-size 16
 ```
 
 Na janela, o interruptor **Modo rápido** fica na página Desempenho, com o custo escrito
@@ -397,7 +395,7 @@ ao lado.
 ## Quanto ocupa em disco
 
 ```bash
-vellum disco
+lauda disco
 ```
 
 Uma instalação completa passa de 3 GB de bibliotecas — e **61% disso são as
@@ -417,7 +415,7 @@ Uma instalação só de CPU, sem diarização e sem interface web, fica em torno
 **400 MB**. Para liberar um modelo específico:
 
 ```bash
-vellum disco --remover large-v3-turbo
+lauda disco --remover large-v3-turbo
 ```
 
 ---
@@ -428,7 +426,7 @@ Processar áudio longo é demorado, e coisas dão errado — a placa engasga, fa
 memória, o computador desliga. O app trata isso em duas camadas.
 
 **1. Pontos de retomada.** Depois de cada etapa cara, o estado parcial é
-gravado em `~/.vellum/checkpoints/`. Se o processo morrer, a próxima
+gravado em `~/.lauda/checkpoints/`. Se o processo morrer, a próxima
 execução **do mesmo arquivo com as mesmas opções** continua de onde parou. Na
 prática: a transcrição não é refeita. O áudio já extraído também fica guardado.
 
@@ -444,17 +442,17 @@ modelo menor.
 Ver e limpar o que ficou guardado:
 
 ```bash
-vellum checkpoints
+lauda checkpoints
 ```
 
 ```bash
-vellum checkpoints --limpar
+lauda checkpoints --limpar
 ```
 
 Para desligar o supervisor (roda direto no processo atual):
 
 ```bash
-vellum run entrevista.mp4 --no-recover
+lauda run entrevista.mp4 --no-recover
 ```
 
 ---
@@ -498,10 +496,10 @@ Os pesos vão para `./models` (pasta ignorada pelo git). Para garantir que nada
 seja baixado durante o processamento:
 
 ```bash
-set VELLUM_OFFLINE=1
+set LAUDA_OFFLINE=1
 ```
 
-(no PowerShell: `$env:VELLUM_OFFLINE=1`; no bash: `export VELLUM_OFFLINE=1`)
+(no PowerShell: `$env:LAUDA_OFFLINE=1`; no bash: `export LAUDA_OFFLINE=1`)
 
 ---
 
@@ -516,7 +514,7 @@ pip install -r requirements-diarize.txt
 Depois basta ligar a flag:
 
 ```bash
-vellum run entrevista.mp4 -m small -l pt --diarize --srt
+lauda run entrevista.mp4 -m small -l pt --diarize --srt
 ```
 
 O relatório passa a trazer `SPEAKER_00`, `SPEAKER_01`… nos segmentos, o tempo
@@ -550,7 +548,7 @@ sobreposta vira um falante só, e vozes parecidas podem ser fundidas.
    - <https://hf.co/pyannote/speaker-diarization-3.1>
 3. Crie um token em <https://hf.co/settings/tokens> e coloque no `.env`:
    `HF_TOKEN=hf_...`
-4. `vellum doctor` deve mostrar `Diarização: pronta`.
+4. `lauda doctor` deve mostrar `Diarização: pronta`.
 
 Sem token e sem pesos locais, o app usa o ECAPA — e, se nem ele estiver
 instalado, desliga a diarização com aviso explícito em vez de quebrar.
@@ -563,7 +561,7 @@ Se você já roda o [Ollama](https://ollama.com) na máquina, o relatório ganha
 bloco com resumo, tópicos, itens de ação e citações — sem sair do computador:
 
 ```bash
-ollama pull qwen3:14b; vellum run entrevista.mp4 --summarize
+ollama pull qwen3:14b; lauda run entrevista.mp4 --summarize
 ```
 
 Configure host e modelo no `.env` (`OLLAMA_HOST`, `OLLAMA_MODEL`).
@@ -577,7 +575,7 @@ motivo e **o pipeline continua normalmente**.
 ## Camada visual (vídeo)
 
 ```bash
-vellum run video.mp4 --visual
+lauda run video.mp4 --visual
 ```
 
 Só ffmpeg, sem modelo de visão: conta cortes de cena, extrai uma thumbnail a
@@ -593,11 +591,11 @@ futuro e vem **desligado de propósito**.
 O MVP não exige Docker. Se quiser isolar o ambiente:
 
 ```bash
-docker build -t vellum .
+docker build -t lauda .
 ```
 
 ```bash
-docker run --rm -v "$PWD/midia:/data:ro" -v "$PWD/saida:/saida" -v "$PWD/models:/app/models" vellum run /data/entrevista.mp4 -m small -o /saida
+docker run --rm -v "$PWD/midia:/data:ro" -v "$PWD/saida:/saida" -v "$PWD/models:/app/models" lauda run /data/entrevista.mp4 -m small -o /saida
 ```
 
 A imagem é CPU-only e já traz o ffmpeg. Os modelos ficam num volume, então a
@@ -609,8 +607,8 @@ imagem não carrega pesos. Para GPU, troque a base por
 ## Troubleshooting
 
 **`ffmpeg AUSENTE` / "Não encontrei ffmpeg"**
-Instale (seção acima) e abra um terminal novo, ou aponte `VELLUM_FFMPEG` /
-`VELLUM_FFPROBE` no `.env`. O app procura no PATH e nos diretórios comuns
+Instale (seção acima) e abra um terminal novo, ou aponte `LAUDA_FFMPEG` /
+`LAUDA_FFPROBE` no `.env`. O app procura no PATH e nos diretórios comuns
 (`C:\ffmpeg\bin`, WinGet Links, scoop, Homebrew, `/usr/bin`).
 
 **`Could not locate cudnn_ops64_9.dll` (ou erro de cuBLAS)**
@@ -644,7 +642,7 @@ Passe `--num-speakers N` se souber quantas pessoas falam. Sem isso, ajuste
 O supervisor detecta sozinho (300 s sem sinal, por padrão), encerra e retoma do
 último ponto salvo, tentando de novo sem GPU e depois com um modelo menor.
 Se ainda assim não concluir, o ponto salvo continua no disco: rodar de novo
-aproveita o que já deu certo. Veja com `vellum checkpoints`.
+aproveita o que já deu certo. Veja com `lauda checkpoints`.
 
 **Quero que ele pare de comer a máquina inteira**
 Baixe os sliders na página Desempenho, ou use `--cpu 40 --gpu 0`. Abaixo de 60% de
@@ -711,7 +709,7 @@ Arquivo que o ffmpeg não abre é recusado com mensagem clara e código de saíd
 ## Estrutura do projeto
 
 ```
-src/vellum/
+src/lauda/
   probe.py        ffprobe -> metadados
   extract.py      ffmpeg  -> WAV 16 kHz mono (temporário, sempre removido)
   audio_stats.py  volume, clipping, silêncio
@@ -738,7 +736,7 @@ src/vellum/
 scripts/
   download_models.py   baixa modelos para uso offline
   make_test_media.py   gera as mídias de exemplo dos testes
-  make_icon.py         gera assets/vellum.ico
+  make_icon.py         gera assets/lauda.ico
   _pdf_common.py       estilo compartilhado dos PDFs
   make_manual.py       gera o manual completo
   make_quickstart.py   gera o guia rápido
@@ -746,7 +744,7 @@ scripts/
   make_frontend.py     gera o guia do front-end
   create_shortcut.ps1  cria o atalho na Área de Trabalho
 
-Vellum.bat   lançador alternativo (duplo clique na pasta)
+Lauda Local.bat   lançador alternativo (duplo clique na pasta)
 ```
 
 Para regenerar os PDFs depois de mexer nas opções ou na tela:
@@ -755,7 +753,7 @@ Para regenerar os PDFs depois de mexer nas opções ou na tela:
 .\.venv\Scripts\python.exe scripts\make_manual.py; .\.venv\Scripts\python.exe scripts\make_quickstart.py; .\.venv\Scripts\python.exe scripts\make_decisions.py; .\.venv\Scripts\python.exe scripts\make_frontend.py
 ```
 
-(precisa de `pip install "vellum[docs]"` uma vez)
+(precisa de `pip install "lauda[docs]"` uma vez)
 
 ## Empacotar para distribuir
 
@@ -770,8 +768,8 @@ py -3.12 -m venv .venv-build; .\.venv-build\Scripts\python.exe -m pip install to
 .\.venv-build\Scripts\python.exe scripts\build_release.py
 ```
 
-Sai em `dist/`: a pasta portátil **Vellum** (~600 MB) e o instalador
-**Vellum-<versão>-setup.exe**.
+Sai em `dist/`: a pasta portátil **Lauda Local** (~600 MB) e o instalador
+**Lauda Local-<versão>-setup.exe**.
 
 O ambiente de build é separado de propósito. Ele **não** tem as bibliotecas
 CUDA (1,7 GB) nem o Gradio: o aplicativo de janela não usa nenhum dos dois, e
@@ -798,7 +796,7 @@ pytest -q
 São **151 testes**. `ruff` e `mypy` passam sem apontamentos:
 
 ```bash
-ruff check src tests scripts; mypy src/vellum
+ruff check src tests scripts; mypy src/lauda
 ```
 
 Os testes de mídia exigem ffmpeg (senão são pulados) e usam arquivos gerados
@@ -806,7 +804,7 @@ por `python scripts/make_test_media.py`. Para exercitar transcrição e
 diarização de verdade (baixa os modelos na primeira vez):
 
 ```bash
-VELLUM_TEST_ASR=1 VELLUM_TEST_DIARIZE=1 pytest -q
+LAUDA_TEST_ASR=1 LAUDA_TEST_DIARIZE=1 pytest -q
 ```
 
 O bloco do Ollama é testado contra um servidor HTTP simulado — nenhum teste
@@ -840,7 +838,7 @@ dizer que uma tela ficou confusa, vale tanto quanto um *pull request*.
 
 Três coisas que o projeto **não** vai fazer, para poupar seu tempo: mandar seu
 arquivo para a nuvem, virar aplicação web, ou coletar telemetria. O porquê de
-cada uma está em `docs/Vellum-Decisoes-Tecnicas.pdf`.
+cada uma está em `docs/Lauda-Local-Decisoes-Tecnicas.pdf`.
 
 ## Licenças
 

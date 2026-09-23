@@ -3,7 +3,7 @@
 ## Como relatar uma falha
 
 **Não abra uma issue pública.** Use o
-[Security Advisory privado](https://github.com/Jp66600/vellum/security/advisories/new)
+[Security Advisory privado](https://github.com/Jp66600/lauda-local/security/advisories/new)
 do GitHub — só o mantenedor enxerga.
 
 Diga o que você conseguiu fazer, com que arquivo ou entrada, e em qual versão
@@ -44,7 +44,7 @@ O que o projeto **não** protege:
 - Do conteúdo do que você processa. O laudo tem a transcrição inteira em texto
   puro — trate a pasta de saída com o mesmo cuidado que trataria o vídeo.
 
-Detalhamento completo na seção 7 de `docs/Vellum-Decisoes-Tecnicas.pdf`.
+Detalhamento completo na seção 7 de `docs/Lauda-Local-Decisoes-Tecnicas.pdf`.
 
 ## Fora de escopo
 

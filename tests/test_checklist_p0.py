@@ -22,8 +22,8 @@ from pathlib import Path
 import pytest
 from conftest import ffmpeg_required
 
-from vellum.config import JobOptions
-from vellum.pipeline import process_media
+from lauda.config import JobOptions
+from lauda.pipeline import process_media
 
 
 def _rodar(entrada: Path, saida: Path, **extras) -> object:
@@ -73,9 +73,9 @@ def test_caso_ollama_desligado_gera_legenda_sem_pull(dialogo_wav: Path, tmp_path
 
 @ffmpeg_required
 def test_caso_arquivo_invalido_falha_com_motivo(invalid_file: Path, tmp_path: Path):
-    from vellum.errors import VellumError
+    from lauda.errors import LaudaError
 
-    with pytest.raises(VellumError) as erro:
+    with pytest.raises(LaudaError) as erro:
         _rodar(invalid_file, tmp_path)
     assert "não conseguiu ler" in str(erro.value)
 
@@ -95,7 +95,7 @@ def test_caso_cobertura_e_medida_em_todo_trabalho(dialogo_wav: Path, tmp_path: P
 @ffmpeg_required
 def test_caso_preset_de_gpu_em_zero_manda_para_a_cpu(dialogo_wav: Path, tmp_path: Path):
     """QA: "baixei a GPU para 0 e a placa continuou trabalhando"."""
-    from vellum.limits import ResourceLimits
+    from lauda.limits import ResourceLimits
 
     resultado = _rodar(dialogo_wav, tmp_path, limits=ResourceLimits(gpu_percent=0))
 

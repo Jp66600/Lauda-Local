@@ -6,7 +6,7 @@ Faz, na ordem:
 
 1. confere que o ambiente de build está limpo (sem CUDA, sem Gradio — eles
    triplicariam o tamanho e não são usados pelo aplicativo de janela);
-2. roda o PyInstaller com `packaging/vellum.spec`;
+2. roda o PyInstaller com `packaging/lauda.spec`;
 3. confere que os binários do ffmpeg entraram;
 4. chama o Inno Setup, se ele estiver instalado, e devolve o caminho do
    instalador pronto.
@@ -24,10 +24,10 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-SPEC = RAIZ / "packaging" / "vellum.spec"
+SPEC = RAIZ / "packaging" / "lauda.spec"
 ISS = RAIZ / "packaging" / "installer.iss"
 DIST = RAIZ / "dist"
-PASTA_APP = DIST / "Vellum"
+PASTA_APP = DIST / "Lauda Local"
 
 #: Pacotes que não podem entrar: peso morto para o aplicativo de janela.
 PROIBIDOS = ("nvidia", "gradio", "gradio_client")
@@ -107,7 +107,7 @@ def rodar_pyinstaller() -> None:
 def conferir_pacote() -> None:
     """O que costuma faltar num pacote do PyInstaller, verificado uma a uma."""
     exigidos = [
-        PASTA_APP / "Vellum.exe",
+        PASTA_APP / "Lauda Local.exe",
         PASTA_APP / "_internal" / "ffmpeg.exe",
         PASTA_APP / "_internal" / "ffprobe.exe",
         PASTA_APP / "_internal" / "LICENCAS.txt",
@@ -131,7 +131,7 @@ def rodar_inno() -> Path | None:
         return None
     print("-- Inno Setup...")
     subprocess.run([str(iscc), str(ISS)], check=True, cwd=RAIZ)
-    setups = sorted(DIST.glob("Vellum-*-setup.exe"))
+    setups = sorted(DIST.glob("Lauda Local-*-setup.exe"))
     return setups[-1] if setups else None
 
 

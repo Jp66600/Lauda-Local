@@ -14,14 +14,14 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from vellum.cues import (
+from lauda.cues import (
     DENSITY_TARGETS,
     MAX_CHARS,
     MIN_CUE_SECONDS,
     build_cues,
     resolve_density,
 )
-from vellum.types import SegmentInfo, WordInfo
+from lauda.types import SegmentInfo, WordInfo
 
 
 def _seg(id_, start, end, text, speaker=None, words=None):
@@ -214,7 +214,7 @@ def test_modo_longo_aceita_paragrafo():
 
 def test_o_rotulo_do_falante_conta_no_orcamento():
     """`[SPEAKER_00] ` ocupa tela; ignorá-lo estourava a segunda linha."""
-    from vellum.subtitles import render_srt
+    from lauda.subtitles import render_srt
 
     texto = "uma frase de tamanho medio que sozinha ja quase enche a legenda toda"
     cues = build_cues([_seg(0, 0.0, 6.0, texto, speaker="SPEAKER_00")], "equilibrada")

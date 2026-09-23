@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from vellum.config import JobOptions
-from vellum.summarize import ollama_available, pull_model, summarize_transcript
+from lauda.config import JobOptions
+from lauda.summarize import ollama_available, pull_model, summarize_transcript
 
 _ANSWER = {
     "resumo": "Duas pessoas discutem um projeto que roda totalmente offline.",
@@ -130,7 +130,7 @@ def test_texto_vazio_nao_chama_o_modelo(tmp_path: Path):
 
 def test_o_modelo_padrao_e_o_qwen3_14b(tmp_path: Path):
     """Decisão de produto: sair do Llama. Tag canônico, nunca `latest`."""
-    from vellum.config import JobOptions
+    from lauda.config import JobOptions
 
     padrao = JobOptions(input_path=tmp_path, output_dir=tmp_path).ollama_model
     assert padrao == "qwen3:14b"
@@ -140,7 +140,7 @@ def test_o_modelo_padrao_e_o_qwen3_14b(tmp_path: Path):
 def test_modelo_ausente_diz_qual_baixar(tmp_path: Path, monkeypatch):
     """Trocar o padrão deixa quem já tinha o Llama sem resumo: o motivo tem de
     aparecer no relatório, com o comando pronto."""
-    from vellum.summarize import ollama_available
+    from lauda.summarize import ollama_available
 
     class RespostaFalsa:
         def __enter__(self):
@@ -152,7 +152,7 @@ def test_modelo_ausente_diz_qual_baixar(tmp_path: Path, monkeypatch):
         def read(self):
             return json.dumps({"models": [{"name": "llama3.1:8b"}]}).encode()
 
-    monkeypatch.setattr("vellum.summarize.urllib.request.urlopen",
+    monkeypatch.setattr("lauda.summarize.urllib.request.urlopen",
                         lambda *a, **k: RespostaFalsa())
     disponivel, motivo = ollama_available(
         _options("http://127.0.0.1:11434", tmp_path, model="qwen3:14b")
@@ -167,7 +167,7 @@ def test_modelo_ausente_diz_qual_baixar(tmp_path: Path, monkeypatch):
 # Reserva quando o modelo grande nao esta baixado (BACKLOG-025)
 # --------------------------------------------------------------------------- #
 def test_usa_o_modelo_pedido_quando_ele_existe(tmp_path: Path):
-    from vellum.summarize import pick_model
+    from lauda.summarize import pick_model
 
     escolhido, motivo = pick_model(
         _options("http://127.0.0.1:1", tmp_path, "qwen3:14b"), ["qwen3:14b", "qwen3:8b"]
@@ -178,7 +178,7 @@ def test_usa_o_modelo_pedido_quando_ele_existe(tmp_path: Path):
 
 def test_cai_para_o_menor_em_vez_de_desistir(tmp_path: Path):
     """Baixar 9 GB no meio do trabalho nao e opcao; desistir do resumo tambem nao."""
-    from vellum.summarize import pick_model
+    from lauda.summarize import pick_model
 
     escolhido, motivo = pick_model(
         _options("http://127.0.0.1:1", tmp_path, "qwen3:14b"), ["qwen3:8b", "mistral"]
@@ -189,7 +189,7 @@ def test_cai_para_o_menor_em_vez_de_desistir(tmp_path: Path):
 
 
 def test_sem_nenhum_dos_dois_diz_o_que_fazer(tmp_path: Path):
-    from vellum.summarize import pick_model
+    from lauda.summarize import pick_model
 
     escolhido, motivo = pick_model(
         _options("http://127.0.0.1:1", tmp_path, "qwen3:14b"), ["mistral"]
@@ -214,14 +214,14 @@ def test_a_troca_de_modelo_aparece_no_resultado(fake_ollama: str, tmp_path: Path
 
 def test_tag_pedida_e_exata(tmp_path: Path):
     """O bug que isto prende: 8B respondendo a um pedido de 14B, relatado como 14B."""
-    from vellum.summarize import _listed
+    from lauda.summarize import _listed
 
     assert _listed("qwen3:14b", ["qwen3:8b"]) is False
     assert _listed("qwen3:14b", ["qwen3:14b"]) is True
 
 
 def test_pedido_sem_tag_aceita_a_familia(tmp_path: Path):
-    from vellum.summarize import _listed
+    from lauda.summarize import _listed
 
     assert _listed("qwen3", ["qwen3:14b"]) is True
     assert _listed("qwen3", ["mistral:7b"]) is False
@@ -231,7 +231,7 @@ def test_pedido_sem_tag_aceita_a_familia(tmp_path: Path):
 # Download do modelo com andamento (BACKLOG-027)
 # --------------------------------------------------------------------------- #
 def test_o_rotulo_do_download_fala_em_gigabytes():
-    from vellum.summarize import _pull_label
+    from lauda.summarize import _pull_label
 
     assert _pull_label("baixando", 1.5 * 1024**3, 9.0 * 1024**3) == (
         "baixando — 1,5 / 9,0 GB (17%)"

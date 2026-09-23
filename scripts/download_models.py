@@ -5,7 +5,7 @@ Uso:
     python scripts/download_models.py --model large-v3-turbo --model small
     python scripts/download_models.py --all
 
-Depois disso, defina VELLUM_OFFLINE=1 para garantir que nada seja baixado
+Depois disso, defina LAUDA_OFFLINE=1 para garantir que nada seja baixado
 durante o processamento.
 """
 
@@ -18,8 +18,8 @@ from pathlib import Path
 # Permite rodar sem instalar o pacote.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from vellum.config import MODEL_CHOICES
-from vellum.hardware import MODEL_MEMORY_GB
+from lauda.config import MODEL_CHOICES
+from lauda.hardware import MODEL_MEMORY_GB
 
 
 def download(model: str, models_dir: Path) -> bool:
@@ -59,7 +59,7 @@ def main() -> int:
     if failures:
         print(f"\nFalharam: {', '.join(failures)}", file=sys.stderr)
         return 1
-    print("\nTudo pronto. Para forçar uso offline: set VELLUM_OFFLINE=1")
+    print("\nTudo pronto. Para forçar uso offline: set LAUDA_OFFLINE=1")
     return 0
 
 

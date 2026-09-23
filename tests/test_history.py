@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from tests_helpers import make_result
 
-from vellum import history
-from vellum.types import CoverageInfo, SegmentInfo, SummaryInfo
+from lauda import history
+from lauda.types import CoverageInfo, SegmentInfo, SummaryInfo
 
 
 def _resultado(**kwargs):

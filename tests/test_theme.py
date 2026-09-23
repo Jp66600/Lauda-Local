@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from vellum import theme as theme_module
-from vellum.theme import DARK, LIGHT, THEME_CHOICES, load_choice, resolve, save_choice
+from lauda import theme as theme_module
+from lauda.theme import DARK, LIGHT, THEME_CHOICES, load_choice, resolve, save_choice
 
 
 @pytest.fixture(autouse=True)

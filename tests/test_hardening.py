@@ -15,10 +15,10 @@ from pathlib import Path
 
 import pytest
 
-from vellum import runner
-from vellum.checkpoint import CheckpointStore, options_fingerprint
-from vellum.config import JobOptions
-from vellum.runner import RecoveryFailed, run_with_recovery
+from lauda import runner
+from lauda.checkpoint import CheckpointStore, options_fingerprint
+from lauda.config import JobOptions
+from lauda.runner import RecoveryFailed, run_with_recovery
 
 
 def _options(tmp_path: Path, **kwargs) -> JobOptions:
@@ -143,7 +143,7 @@ def test_matar_o_processo_travado_leva_os_netos_junto(tmp_path: Path, monkeypatc
 # Desempenho: não reler o arquivo duas vezes
 # --------------------------------------------------------------------------- #
 def test_o_hash_conhecido_evita_reler_o_arquivo(tmp_path: Path, monkeypatch):
-    from vellum import pipeline
+    from lauda import pipeline
 
     arquivo = tmp_path / "grande.wav"
     arquivo.write_bytes(b"conteudo")
@@ -157,7 +157,7 @@ def test_o_hash_conhecido_evita_reler_o_arquivo(tmp_path: Path, monkeypatch):
 
 
 def test_sem_hash_conhecido_ele_calcula(tmp_path: Path):
-    from vellum.pipeline import build_source_info
+    from lauda.pipeline import build_source_info
 
     arquivo = tmp_path / "pequeno.wav"
     arquivo.write_bytes(b"conteudo")
@@ -210,7 +210,7 @@ def test_mudar_o_modo_invalida_o_ponto_de_retomada(tmp_path: Path):
 
 
 def test_engine_em_lote_so_e_criado_quando_pedido(tmp_path: Path):
-    from vellum.transcribe import _make_engine
+    from lauda.transcribe import _make_engine
 
     modelo = object()
     engine, extra = _make_engine(modelo, _options(tmp_path, batch_size=0))
@@ -219,7 +219,7 @@ def test_engine_em_lote_so_e_criado_quando_pedido(tmp_path: Path):
 
 def test_engine_em_lote_repassa_o_tamanho(tmp_path: Path):
     pytest.importorskip("faster_whisper")
-    from vellum.transcribe import _make_engine
+    from lauda.transcribe import _make_engine
 
     class ModeloFalso:
         pass

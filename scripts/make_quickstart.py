@@ -1,4 +1,4 @@
-"""Gera o guia rápido em PDF (docs/Vellum-Guia-Rapido.pdf).
+"""Gera o guia rápido em PDF (docs/Lauda-Local-Guia-Rapido.pdf).
 
     python scripts/make_quickstart.py
 
@@ -45,9 +45,9 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from vellum import APP_NAME, APP_VERSION
+from lauda import APP_NAME, APP_VERSION
 
-OUTPUT = ROOT / "docs" / "Vellum-Guia-Rapido.pdf"
+OUTPUT = ROOT / "docs" / "Lauda-Local-Guia-Rapido.pdf"
 
 STEP_NUMBER = ParagraphStyle(
     "step_number", fontName=f"{FONT}-Bold", fontSize=30, leading=34,
@@ -150,7 +150,7 @@ def build() -> Path:
     story.append(
         para(
             "Você tem uma gravação — uma entrevista, uma reunião, uma aula, um vídeo — "
-            "e precisa do que foi <b>dito</b>, em texto. O Vellum transforma o "
+            "e precisa do que foi <b>dito</b>, em texto. O Lauda Local transforma o "
             "arquivo num relatório: a transcrição completa com a marcação de tempo, "
             "quem falou cada trecho, o idioma, a qualidade do áudio e os dados "
             "técnicos do arquivo."
@@ -177,7 +177,7 @@ def build() -> Path:
     story.append(Paragraph("Abrir o aplicativo", SECTION))
     story.append(
         para(
-            "Dê <b>dois cliques</b> no atalho <b>Vellum</b> que está na sua "
+            "Dê <b>dois cliques</b> no atalho <b>Lauda Local</b> que está na sua "
             "Área de Trabalho. Abre uma janela própria do programa — não é site, não "
             "abre navegador, não precisa de internet."
         )
@@ -367,9 +367,9 @@ def build() -> Path:
     story.append(Spacer(1, 4 * mm))
     story.append(
         para(
-            f"<font color='#7C8496'>Manual completo: docs/Vellum-Manual.pdf "
+            f"<font color='#7C8496'>Manual completo: docs/Lauda-Local-Manual.pdf "
             f"&nbsp;|&nbsp; decisões técnicas: "
-            f"docs/Vellum-Decisoes-Tecnicas.pdf &nbsp;|&nbsp; "
+            f"docs/Lauda-Local-Decisoes-Tecnicas.pdf &nbsp;|&nbsp; "
             f"{APP_NAME} {APP_VERSION}, {date.today().strftime('%d/%m/%Y')}</font>",
             "note",
         )

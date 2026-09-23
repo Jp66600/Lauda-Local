@@ -25,12 +25,12 @@ perdido no código de alguém. O resto deste documento é detalhe.
 ## Alcance
 
 Vale em tudo que pertence ao projeto: issues, pull requests, commits, discussões
-e qualquer espaço em que alguém esteja representando o Vellum.
+e qualquer espaço em que alguém esteja representando o Lauda Local.
 
 ## Como relatar
 
 Abra um **security advisory privado** em
-[Security → Report a vulnerability](https://github.com/Jp66600/vellum/security/advisories/new)
+[Security → Report a vulnerability](https://github.com/Jp66600/lauda-local/security/advisories/new)
 — ele serve para relatos confidenciais em geral, não só para falhas de
 segurança, e só o mantenedor enxerga. Se preferir, mande uma mensagem pelo
 perfil do mantenedor no GitHub.

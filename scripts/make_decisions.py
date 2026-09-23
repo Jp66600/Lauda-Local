@@ -1,4 +1,4 @@
-"""Gera o documento técnico (docs/Vellum-Decisoes-Tecnicas.pdf).
+"""Gera o documento técnico (docs/Lauda-Local-Decisoes-Tecnicas.pdf).
 
     python scripts/make_decisions.py
 
@@ -46,9 +46,9 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 
-from vellum import APP_NAME, APP_VERSION
+from lauda import APP_NAME, APP_VERSION
 
-OUTPUT = ROOT / "docs" / "Vellum-Decisoes-Tecnicas.pdf"
+OUTPUT = ROOT / "docs" / "Lauda-Local-Decisoes-Tecnicas.pdf"
 W = 170 * mm
 
 
@@ -572,7 +572,7 @@ def build() -> Path:
             "placa de vídeo. Como ninguém descobre isso sozinho, o programa passou a "
             "mostrar a conta e a permitir liberar espaço:"
         ),
-        code("vellum disco"),
+        code("lauda disco"),
         Spacer(1, 3 * mm),
         grid(
             ["Componente", "Tamanho", "Necessário?"],
@@ -669,7 +669,7 @@ def build() -> Path:
             "<b>Segredo em disco</b> — verifica que o token não aparece no JSON que o "
             "supervisor grava para o processo filho.",
             "<b>Isolamento do perfil</b> — uma fixture obrigatória redireciona "
-            "<font face='" + MONO + "'>~/.vellum</font> para uma pasta temporária. "
+            "<font face='" + MONO + "'>~/.lauda</font> para uma pasta temporária. "
             "Ela foi criada depois que um teste de verdade escreveu no perfil real.",
         ]),
         Spacer(1, 3 * mm),
@@ -745,7 +745,7 @@ def build() -> Path:
                 ["Instalado em disco", "~860 MB", "Programa, bibliotecas e ffmpeg."],
                 ["Modelo de transcrição", "0,5 a 3 GB",
                  "Baixado na primeira execução, uma vez. Fica em "
-                 "<font name='Mono' size='8'>~/.vellum</font> — desinstalar não apaga."],
+                 "<font name='Mono' size='8'>~/.lauda</font> — desinstalar não apaga."],
             ],
             widths=[42 * mm, 28 * mm, W - 70 * mm],
             mono_columns=(),

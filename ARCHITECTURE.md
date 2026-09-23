@@ -1,4 +1,4 @@
-# Arquitetura — Vellum
+# Arquitetura — Lauda Local
 
 Mapa para quem chega agora (pessoa ou agente). Responde três perguntas: **onde
 está cada coisa**, **como um trabalho corre do começo ao fim** e **o que não se
@@ -32,7 +32,7 @@ o contrário vai propor a solução errada.
 ## 2. Onde fica cada coisa
 
 ```
-src/vellum/
+src/lauda/
   cli.py          os comandos de terminal (run, doctor, disco, models, app, ui)
   desktop.py      a janela nativa: layout, tema, eventos, resultado
   widgets.py      os widgets arredondados (o ttk nao arredonda nada)
@@ -60,7 +60,7 @@ src/vellum/
   checkpoint.py   pontos de retomada por sha256 + opcoes
   hardware.py     detecta CPU/RAM/GPU e avalia se a maquina da conta
   limits.py       os limites de uso (sliders e os quatro presets)
-  profile.py      a pasta ~/.vellum e a migracao do nome antigo
+  profile.py      a pasta ~/.lauda e a migracao do nome antigo
   logging_setup.py  log em tela e em arquivo, um por processo
 ```
 
@@ -127,15 +127,15 @@ regressão, não escolha de estilo.
 ## 5. Onde as coisas do usuário ficam
 
 ```
-~/.vellum/
+~/.lauda/
   ui.json                  tema, limites de maquina, opcoes da tela
   history.json             o historico de trabalhos
   checkpoints/             pontos de retomada
-  logs/vellum.log      o aplicativo
-  logs/vellum-worker.log  o processamento
+  logs/lauda.log      o aplicativo
+  logs/lauda-worker.log  o processamento
 ```
 
-Os modelos ficam em `VELLUM_MODELS_DIR` (padrão `./models`), baixados uma
+Os modelos ficam em `LAUDA_MODELS_DIR` (padrão `./models`), baixados uma
 vez e reutilizados sem internet.
 
 **Nos testes, esse perfil é isolado por uma fixture autouse no `conftest.py`.**
@@ -147,11 +147,11 @@ de sujeira mais de uma vez.
 ## 6. Como rodar
 
 ```bash
-.\.venv\Scripts\python.exe -m vellum run entrada.mp4 -o saida
+.\.venv\Scripts\python.exe -m lauda run entrada.mp4 -o saida
 ```
 
 ```bash
-.\.venv\Scripts\python.exe -m vellum.desktop
+.\.venv\Scripts\python.exe -m lauda.desktop
 ```
 
 ```bash
@@ -164,22 +164,27 @@ seção "Empacotar para distribuir".
 
 ---
 
-## 7. Se você veio do backlog do Vellum
+## 7. Se você veio do backlog do Lauda Local
 
-O arquivo `VELLUM_BACKLOG.md` foi escrito sem leitura deste repositório e supõe
+O arquivo `LAUDA_BACKLOG.md` foi escrito sem leitura deste repositório e supõe
 Electron/React, `%APPDATA%` e `Promise.all` no STT. Nada disso existe aqui.
 Antes de implementar qualquer item de lá, confira a premissa contra este
 documento — vários já estavam resolvidos e outros descrevem uma aplicação
 diferente.
 
-O rename para Vellum foi feito na versão 0.9.0-beta: `AppId` novo, o instalador
-remove a versão MediaIntel Local em silêncio, e `profile.py` copia
-`~/.mediaintel` para `~/.vellum` na primeira abertura. A pasta do código-fonte
-continua `mediaintel-local` de propósito: renomeá-la quebraria os dois ambientes
-virtuais, que guardam caminhos absolutos.
+O produto já teve três nomes: **MediaIntel Local** até a 0.8.0-beta, **Vellum**
+na 0.9.0-beta e **Lauda Local** a partir da 0.10.0-beta. Cada troca seguiu o
+mesmo roteiro, e ele vale para a próxima se houver: `AppId` novo no instalador,
+com um bloco `[Code]` que desinstala as versões anteriores em silêncio;
+`profile.py` copiando o perfil antigo para o novo na primeira abertura
+(`LEGACY_DIRS`, do mais recente para o mais antigo); e o prefixo de ambiente
+anterior continuando a ser lido (`LEGACY_ENV_PREFIXES`).
 
-Publicar como open source segue em aberto, e é decisão de produto — não de um
-agente.
+O que **não** muda de nome é a pasta do código-fonte, que segue
+`mediaintel-local`: renomeá-la quebraria os atalhos dos dois ambientes virtuais,
+que guardam caminhos absolutos.
+
+O projeto foi publicado como open source (MIT) em 2026-09-19.
 
 ### O que não se aplica a este desenho
 

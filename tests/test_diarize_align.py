@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from vellum.align import refine_segment_boundaries
-from vellum.config import JobOptions
-from vellum.diarize import (
+from lauda.align import refine_segment_boundaries
+from lauda.config import JobOptions
+from lauda.diarize import (
     SpeakerTurn,
     _agglomerative,
     _chunks_from_segments,
@@ -18,7 +18,7 @@ from vellum.diarize import (
     renumber_speakers,
     speaker_stats,
 )
-from vellum.types import SegmentInfo, WordInfo
+from lauda.types import SegmentInfo, WordInfo
 
 numpy = pytest.importorskip("numpy")
 

@@ -1,4 +1,4 @@
-"""Gera o guia do front-end (docs/Vellum-Front-End.pdf).
+"""Gera o guia do front-end (docs/Lauda-Local-Front-End.pdf).
 
     python scripts/make_frontend.py
 
@@ -47,9 +47,9 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 
-from vellum import APP_NAME, APP_VERSION
+from lauda import APP_NAME, APP_VERSION
 
-OUTPUT = ROOT / "docs" / "Vellum-Front-End.pdf"
+OUTPUT = ROOT / "docs" / "Lauda-Local-Front-End.pdf"
 W = 170 * mm
 
 
@@ -160,7 +160,7 @@ def build() -> Path:
     story += [
         h("1. O que é o front-end deste projeto"),
         para(
-            "A interface do Vellum é uma <b>janela nativa do Windows</b>, "
+            "A interface do Lauda Local é uma <b>janela nativa do Windows</b>, "
             "desenhada com Tkinter. Não existe navegador, não existe servidor local, "
             "não existe HTML, CSS ou JavaScript em lugar nenhum. Isso foi um requisito "
             "explícito: o aplicativo tinha de abrir uma janela própria, não uma página "
@@ -270,7 +270,7 @@ def build() -> Path:
             "para o modo <b>auto</b>.",
             "<font name='Mono' size='9'>load_choice()</font> / "
             "<font name='Mono' size='9'>save_choice()</font> — a preferência vai para "
-            "<font name='Mono' size='9'>~/.vellum/ui.json</font>, junto dos limites "
+            "<font name='Mono' size='9'>~/.lauda/ui.json</font>, junto dos limites "
             "de máquina. Gravação preserva as outras chaves do arquivo.",
             "<font name='Mono' size='9'>apply_titlebar()</font> — pinta a barra de "
             "título de escuro via <font name='Mono' size='9'>DwmSetWindowAttribute</font>. "
@@ -392,14 +392,14 @@ def build() -> Path:
     story += [
         h("4. A janela"),
         para(
-            "<font name='Mono' size='9'>VellumApp</font> concentra a montagem e o "
+            "<font name='Mono' size='9'>LaudaApp</font> concentra a montagem e o "
             "estado da tela. A ordem de construção importa e é sempre a mesma:",
             "lead",
         ),
         code([
             "__init__",
             "   +-- colecoes de repintura vazias   (_cards, _buttons, _checks, ...)",
-            "   +-- carrega tema e limites salvos  (~/.vellum/ui.json)",
+            "   +-- carrega tema e limites salvos  (~/.lauda/ui.json)",
             "   +-- _build_window   titulo, tamanho 1200x800, icone",
             "   +-- _build_fonts    Segoe UI 9/10/11/21 e Consolas 10",
             "   +-- _build_layout   header + cartao esquerdo + cartao direito",
@@ -546,11 +546,11 @@ def build() -> Path:
             "ttk normalmente, e que cor se escreve onde é usada):"
         ),
         code([
-            "Contexto do projeto (Vellum, front-end):",
+            "Contexto do projeto (Lauda Local, front-end):",
             "",
             "- Aplicativo de janela nativa em Python + Tkinter. Nao e web: nao existe",
             "  HTML, CSS, JS, navegador nem servidor local. Nao proponha nenhum.",
-            "- A interface vive em 3 arquivos, dentro de src/vellum/:",
+            "- A interface vive em 3 arquivos, dentro de src/lauda/:",
             "    theme.py     paletas clara e escura (21 tokens de cor) + preferencia",
             "    widgets.py   widgets arredondados desenhados em tk.Canvas",
             "    desktop.py   a janela: layout, tema, eventos, resultado",
@@ -806,7 +806,7 @@ def build() -> Path:
         Spacer(1, 4 * mm),
         h("Comandos", "h2"),
         code([
-            "python -m vellum.desktop        abre a janela",
+            "python -m lauda.desktop        abre a janela",
             "pytest tests/test_desktop.py -q     so os testes de interface",
             "pytest tests -q                     a suite inteira",
             "ruff check src tests scripts        estilo",

@@ -1,6 +1,6 @@
 """Smoke tests do pipeline: áudio sintético, vídeo mudo e arquivo inválido.
 
-Os testes que carregam o modelo Whisper só rodam com VELLUM_TEST_ASR=1
+Os testes que carregam o modelo Whisper só rodam com LAUDA_TEST_ASR=1
 (baixar o modelo leva minutos na primeira vez).
 """
 
@@ -13,20 +13,20 @@ from pathlib import Path
 import pytest
 from conftest import ffmpeg_required
 
-from vellum.config import JobOptions
-from vellum.errors import ProbeError
-from vellum.extract import extract_audio, temp_wav_path
-from vellum.pipeline import process_media
-from vellum.probe import probe_media
+from lauda.config import JobOptions
+from lauda.errors import ProbeError
+from lauda.extract import extract_audio, temp_wav_path
+from lauda.pipeline import process_media
+from lauda.probe import probe_media
 
 asr_required = pytest.mark.skipif(
-    os.environ.get("VELLUM_TEST_ASR") != "1",
-    reason="defina VELLUM_TEST_ASR=1 para rodar a transcrição de verdade",
+    os.environ.get("LAUDA_TEST_ASR") != "1",
+    reason="defina LAUDA_TEST_ASR=1 para rodar a transcrição de verdade",
 )
 
 diarize_required = pytest.mark.skipif(
-    os.environ.get("VELLUM_TEST_DIARIZE") != "1",
-    reason="defina VELLUM_TEST_DIARIZE=1 para rodar a diarização de verdade",
+    os.environ.get("LAUDA_TEST_DIARIZE") != "1",
+    reason="defina LAUDA_TEST_DIARIZE=1 para rodar a diarização de verdade",
 )
 
 
@@ -156,10 +156,10 @@ def test_retoma_do_ponto_salvo_sem_transcrever_de_novo(tone_wav: Path, tmp_path:
     É a prova de que a retomada economiza o trabalho caro: este teste roda sem
     baixar nada, e falharia com timeout se a transcrição fosse refeita.
     """
-    from vellum.checkpoint import CheckpointStore, job_key
-    from vellum.pipeline import build_source_info
-    from vellum.probe import probe_media
-    from vellum.types import (
+    from lauda.checkpoint import CheckpointStore, job_key
+    from lauda.pipeline import build_source_info
+    from lauda.probe import probe_media
+    from lauda.types import (
         AudioDiagnostics,
         JobResult,
         LanguageInfo,
@@ -185,7 +185,7 @@ def test_retoma_do_ponto_salvo_sem_transcrever_de_novo(tone_wav: Path, tmp_path:
     store.save("asr", parcial)
 
     # Se a transcrição fosse refeita, isto estouraria: não existe modelo aqui.
-    import vellum.pipeline as pipeline_module
+    import lauda.pipeline as pipeline_module
 
     def nao_deve_ser_chamado(*args, **kwargs):
         raise AssertionError("a transcrição foi refeita apesar do ponto salvo")

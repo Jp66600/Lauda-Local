@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from vellum.ffmpeg_tools import resolve_tools
+from lauda.ffmpeg_tools import resolve_tools
 
 MEDIA_DIR = Path(__file__).parent / "_media"
 
@@ -94,11 +94,11 @@ def dialogo_wav(media_dir: Path) -> Path:
 
 @pytest.fixture(autouse=True)
 def _isola_perfil_do_usuario(tmp_path_factory, monkeypatch):
-    """Nenhum teste pode escrever no perfil real (~/.vellum).
+    """Nenhum teste pode escrever no perfil real (~/.lauda).
 
     Vale para a preferência de tema/limites e para os pontos de retomada.
     """
-    from vellum import checkpoint, history, profile, theme
+    from lauda import checkpoint, history, profile, theme
 
     base = tmp_path_factory.mktemp("perfil")
     monkeypatch.setattr(profile, "DATA_DIR", base)

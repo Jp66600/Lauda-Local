@@ -2,7 +2,7 @@
 
 ## Este projeto
 
-Vellum é distribuído sob a licença **MIT**.
+Lauda Local é distribuído sob a licença **MIT**.
 
 ## Dependências Python
 

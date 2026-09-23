@@ -22,7 +22,7 @@ from reportlab.platypus import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-ICON = ROOT / "assets" / "vellum.png"
+ICON = ROOT / "assets" / "lauda.png"
 
 # --------------------------------------------------------------------------- #
 # Identidade visual (mesma paleta do ícone)

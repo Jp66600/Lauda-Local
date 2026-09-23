@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vellum"
-version = "0.9.0b1"
+name = "lauda"
+version = "0.10.0b1"
 description = "Extracao 100% local de informacao de arquivos de audio e video (metadados, transcricao, diagnostico)."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { text = "MIT" }
-authors = [{ name = "Vellum" }]
+authors = [{ name = "Lauda Local" }]
 keywords = ["whisper", "transcription", "ffmpeg", "offline", "speech-to-text"]
 
 dependencies = [
@@ -34,11 +34,11 @@ dev = ["pytest>=8", "mypy>=1.10", "ruff>=0.6"]
 docs = ["reportlab>=4.1", "pypdf>=5", "pypdfium2>=4", "pillow>=10"]
 
 [project.scripts]
-vellum = "vellum.cli:main"
+lauda = "lauda.cli:main"
 
 # gui-scripts gera um .exe SEM janela de console: e o aplicativo de verdade.
 [project.gui-scripts]
-vellum-app = "vellum.desktop:main"
+lauda-app = "lauda.desktop:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -47,7 +47,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-vellum = ["resources/stopwords/*.txt", "resources/icons/*.png"]
+lauda = ["resources/stopwords/*.txt", "resources/icons/*.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -79,10 +79,10 @@ ignore = [
 "tests/*" = ["S101", "S404", "S311", "S108", "S105", "S106", "C408", "UP031", "RUF012"]
 # S310: todas as chamadas passam por `_safe_url`, que recusa esquemas que nao
 # sejam http/https — a validacao existe, o ruff so nao a enxerga.
-"src/vellum/summarize.py" = ["S310"]
+"src/lauda/summarize.py" = ["S310"]
 "scripts/*" = ["T201", "S404", "S603"]      # scripts de linha de comando imprimem
-"src/vellum/cli.py" = ["B008"]          # typer.Option em default e a API do Typer
-"src/vellum/ui.py" = ["B008"]           # gr.Progress() em default e a API do Gradio
+"src/lauda/cli.py" = ["B008"]          # typer.Option em default e a API do Typer
+"src/lauda/ui.py" = ["B008"]           # gr.Progress() em default e a API do Gradio
 
 [tool.mypy]
 # 3.12 e a versao que o projeto realmente roda; com 3.11 o mypy nem consegue
