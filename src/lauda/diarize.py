@@ -18,6 +18,7 @@ import logging
 import math
 import os
 import wave
+from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
@@ -26,6 +27,14 @@ from typing import Any
 from .config import JobOptions
 from .logging_setup import quiet_third_party
 from .types import DiarizationInfo, SegmentInfo, SpeakerStat
+
+#: callback(fracao 0..1, mensagem) — dá sinal de vida durante a etapa.
+ProgressFn = Callable[[float, str], None]
+
+#: De quantos em quantos trechos a etapa avisa que está viva. Vinte é o
+#: bastante para o supervisor não confundir lentidão com travamento, e pouco
+#: o suficiente para não inundar o log.
+_PROGRESS_EVERY = 20
 
 log = logging.getLogger("lauda.diarize")
 
@@ -246,7 +255,10 @@ def _agglomerative(
 
 
 def _run_ecapa(
-    wav_path: Path, options: JobOptions, segments: list[SegmentInfo]
+    wav_path: Path,
+    options: JobOptions,
+    segments: list[SegmentInfo],
+    progress: ProgressFn | None = None,
 ) -> list[SpeakerTurn]:
     import numpy as np
     import torch
@@ -284,7 +296,17 @@ def _run_ecapa(
 
     embeddings: list[np.ndarray] = []
     kept: list[tuple[int, float, float]] = []
-    for segment_index, start, end in chunks:
+    total = len(chunks)
+    for posicao, (segment_index, start, end) in enumerate(chunks):
+        # Sinal de vida a cada punhado de trechos. Sem isto a etapa fica muda
+        # por minutos numa reuniao longa, e o supervisor mata um processo que
+        # so estava lento — foi exatamente o que aconteceu com um arquivo de
+        # 1094 trechos.
+        if progress is not None and posicao % _PROGRESS_EVERY == 0:
+            progress(
+                posicao / total,
+                f"identificando falantes ({posicao}/{total})",
+            )
         begin = int(start * rate)
         finish = min(len(audio), int(end * rate))
         piece = audio[begin:finish]
@@ -405,6 +427,7 @@ def diarize(
     options: JobOptions,
     *,
     segments: list[SegmentInfo],
+    progress: ProgressFn | None = None,
 ) -> DiarizationInfo:
     """Executa a diarização quando possível. Nunca levanta exceção para cima."""
     readiness = check_readiness(options)
@@ -415,9 +438,13 @@ def diarize(
     backend = readiness.backend
     try:
         if backend == "pyannote":
+            # O pyannote e uma chamada unica e fechada: nao da para subdividir,
+            # entao o aviso vai antes dela.
+            if progress is not None:
+                progress(0.0, "identificando falantes (pyannote)")
             turns = _run_pyannote(wav_path, options)
         else:
-            turns = _run_ecapa(wav_path, options, segments)
+            turns = _run_ecapa(wav_path, options, segments, progress)
     except Exception as exc:
         reason = f"o backend '{backend}' falhou: {exc.__class__.__name__}: {exc}"
         log.warning("Diarização falhou: %s", reason)

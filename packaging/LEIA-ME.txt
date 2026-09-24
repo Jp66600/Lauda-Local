@@ -1,4 +1,4 @@
-LAUDA LOCAL — versão de teste 0.12.0-beta
+LAUDA LOCAL — versão de teste 0.13.0-beta
 =========================================
 
 O que é
@@ -71,7 +71,9 @@ Embaixo, três botões:
     Copiar o texto             manda tudo para a área de transferência
     Abrir o laudo              o relatório completo daquele mesmo arquivo
 
-Trocou a pasta de saída? As abas acompanham.
+Trocou a pasta de saída? As abas acompanham. A lista se atualiza sozinha
+quando você abre a página e quando um trabalho termina — e tem um botão
+"Atualizar" ali em cima, para quando você mexer na pasta por fora.
 
 
 A página "Arquivos"

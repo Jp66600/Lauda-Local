@@ -1882,3 +1882,62 @@ def test_quando_a_maquina_nao_deixa_pausar_o_botao_volta_atras(app, silent_video
     assert "Não consegui pausar" in app.status_label.cget("text")
     assert "Trabalhando" in app.state_label.cget("text")
     app.worker = None
+
+
+# -------------------------------------------------- atualizar as abas ------
+def test_transcricao_nova_na_pasta_aparece_ao_atualizar(app, tmp_path: Path):
+    """O caso relatado: o arquivo chega na pasta e a tela não sabia."""
+    _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
+    saida = Path(app.folder_var.get())
+    (saida / "chegou_depois.transcript.txt").write_text("texto novo", encoding="utf-8")
+
+    assert len(app.transcript_buttons) == 1, "a tela ainda não sabe"
+
+    app.refresh_transcripts()
+
+    assert len(app.transcript_buttons) == 2
+    assert "Transcrições atualizadas" in app.status_label.cget("text")
+    assert "1 transcrição(ões) nova(s)" in app.status_label.cget("text")
+
+
+def test_transcricao_apagada_some_ao_atualizar(app, tmp_path: Path):
+    caminho = _trabalho(app, tmp_path, "some.mp4", "texto")
+    _trabalho(app, tmp_path, "fica.mp4", "texto")
+    caminho.unlink()
+
+    app.refresh_transcripts()
+
+    assert [b._text for b in app.transcript_buttons.values()] == ["fica.mp4"]
+    assert "sumiu(ram) da pasta" in app.status_label.cget("text")
+
+
+def test_atualizar_mantem_a_aba_aberta(app, tmp_path: Path):
+    """Quem clica em Atualizar quer ver o que mudou, não perder o lugar."""
+    primeiro = _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
+    _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
+    app.show_transcript(str(primeiro))
+
+    app.refresh_transcripts()
+
+    assert app._transcript_current == str(primeiro)
+    assert "texto do primeiro" in app.text_plain.get("1.0", "end-1c")
+
+
+def test_sem_novidade_o_status_nao_e_poluido(app, tmp_path: Path):
+    _trabalho(app, tmp_path, "unico.mp4", "texto")
+    app.status_label.configure(text="mensagem anterior")
+
+    app.refresh_transcripts()
+
+    assert app.status_label.cget("text") == "mensagem anterior"
+
+
+def test_abrir_a_pagina_transcricao_atualiza(app, tmp_path: Path):
+    _trabalho(app, tmp_path, "primeiro.mp4", "texto")
+    saida = Path(app.folder_var.get())
+    (saida / "apareceu.transcript.txt").write_text("novo", encoding="utf-8")
+
+    app.nav.select(app.tab_job)          # sai da página
+    app.nav.select(app.tab_plain)        # e volta para ela
+
+    assert len(app.transcript_buttons) == 2, "abrir a página relê a pasta"

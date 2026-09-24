@@ -43,7 +43,7 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 | Documento | Páginas | Para quem |
 |---|---|---|
 | [Guia rápido](docs/Lauda-Local-Guia-Rapido.pdf) | 3 | quem só quer transcrever um arquivo hoje |
-| [Manual completo](docs/Lauda-Local-Manual.pdf) | 18 | cada tela, cada opção e o que fazer quando dá errado |
+| [Manual completo](docs/Lauda-Local-Manual.pdf) | 19 | cada tela, cada opção e o que fazer quando dá errado |
 | [Decisões técnicas](docs/Lauda-Local-Decisoes-Tecnicas.pdf) | 16 | o porquê de cada escolha, as medições e os limites assumidos |
 | [Front-end](docs/Lauda-Local-Front-End.pdf) | 16 | como a interface foi construída e como pedir mudanças nela |
 
@@ -52,6 +52,14 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 ## O que há de novo
 
 A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
+
+**0.13.0-beta**
+- **Falha na diarização deixou de custar a transcrição.** Ela agora dá sinal de
+  vida (antes ficava muda e era confundida com travamento), o rebaixamento
+  desliga a etapa que falhou em vez do modelo, e mexer em "quem fala" não
+  invalida mais um texto pronto.
+- Botão **Atualizar** na página Transcrição, que também relê a pasta sempre que
+  é aberta.
 
 **0.12.0-beta**
 - **Pausar e retomar** um trabalho em andamento: o processo congela onde está

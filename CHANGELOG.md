@@ -2,6 +2,37 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.13.0-beta] — 2026-09-24
+
+### Corrigido — uma transcrição pronta deixou de ser jogada fora
+
+Três trabalhos de um usuário morreram assim: a transcrição terminava, a
+**diarização** demorava, o vigia de travamento matava o processo por silêncio,
+o supervisor tentava de novo com o ambiente rebaixado — e o rebaixamento
+**invalidava o ponto de retomada**, obrigando a transcrever o arquivo inteiro
+outra vez. Três rodadas de horas, e no fim nada foi entregue, com o texto
+completo guardado no disco o tempo todo.
+
+Três mudanças fecham esse buraco:
+
+- **A diarização dá sinal de vida.** Ela percorria 1094 trechos em silêncio
+  absoluto; agora avisa a cada 20 e o progresso anda na tela. O supervisor
+  deixa de confundir lentidão com travamento — que era a causa raiz.
+- **O rebaixamento é da etapa que falhou.** Travou identificando quem fala?
+  Desliga **a diarização**, não o modelo de transcrição. Antes, trocar o modelo
+  invalidava tudo que já estava pronto.
+- **As opções de quem fala saíram da identidade do ponto de retomada.** A
+  diarização roda depois da transcrição, então mudá-la (ou desligá-la) não
+  invalida um texto pronto. Mexer em "quem fala" deixou de custar uma
+  transcrição inteira. Quando o ponto salvo é **da** diarização e essas opções
+  mudam, ele volta uma etapa — e só a diarização é refeita.
+
+### Adicionado
+
+- **Botão "Atualizar"** na página Transcrição, e a página passa a reler a pasta
+  **sempre que é aberta**. Transcrição que chega depois aparece; arquivo que foi
+  apagado some. A aba que estava aberta é mantida.
+
 ## [0.12.0-beta] — 2026-09-24
 
 ### Adicionado

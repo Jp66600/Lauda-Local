@@ -78,8 +78,27 @@ class RecoveryFailed(LaudaError):
     """Todas as tentativas falharam."""
 
 
-def _degrade(options: JobOptions, attempt: int) -> tuple[JobOptions, str]:
-    """Rebaixa o ambiente entre tentativas, do menos ao mais drástico."""
+def _degrade(
+    options: JobOptions, attempt: int, stage: str = ""
+) -> tuple[JobOptions, str]:
+    """Rebaixa o ambiente entre tentativas, do menos ao mais drástico.
+
+    O rebaixamento é **da etapa que falhou**. Quem trava na diarização não
+    ganha nada com um modelo de transcrição menor — e pior: trocar o modelo
+    invalida o ponto de retomada e faz o arquivo inteiro ser transcrito de
+    novo. Foi assim que um usuário esperou três rodadas de horas para não
+    receber nada, com a transcrição pronta guardada no disco o tempo todo.
+    """
+    if stage == "diarize" and options.diarize:
+        return (
+            replace(options, diarize=False),
+            "desligando a identificação de quem fala, que foi onde travou",
+        )
+    if stage == "visual" and options.visual:
+        return replace(options, visual=False), "desligando as miniaturas"
+    if stage == "summarize" and options.summarize:
+        return replace(options, summarize=False), "desligando o resumo do Ollama"
+
     if attempt == 2 and options.limits.use_gpu:
         return (
             replace(options, limits=replace(options.limits, gpu_percent=0)),
@@ -135,12 +154,13 @@ def run_with_recovery(
     attempts: list[Attempt] = []
     current = options
     last_error = "sem detalhes"
+    etapa_ruim = ""
 
     with tempfile.TemporaryDirectory(prefix="lauda_run_") as workdir:
         work = Path(workdir)
         for number in range(1, max_attempts + 1):
             if number > 1:
-                current, how = _degrade(current, number)
+                current, how = _degrade(current, number, etapa_ruim)
                 notify(
                     "reiniciando",
                     f"Tentativa {number} de {max_attempts}, {how}. "
@@ -174,6 +194,7 @@ def run_with_recovery(
                 return read_json(result_path), attempts
 
             last_error = attempt.reason or "o processo terminou sem resultado"
+            etapa_ruim = attempt.stage
             if attempt.stalled:
                 notify(
                     "travou",

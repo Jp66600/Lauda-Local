@@ -20,7 +20,13 @@ from pathlib import Path
 from . import APP_NAME, APP_VERSION
 from .align import refine_segment_boundaries
 from .audio_stats import analyze_audio, apply_speech_stats, build_warnings
-from .checkpoint import CheckpointStore, job_key, purge_old, stage_index
+from .checkpoint import (
+    CheckpointStore,
+    diarize_fingerprint,
+    job_key,
+    purge_old,
+    stage_index,
+)
 from .config import JobOptions, OutputPaths
 from .coverage import analyze_coverage
 from .diarize import diarize as run_diarization
@@ -179,6 +185,16 @@ def process_media(
         saved = store.load()
         if saved is not None and saved.stage_index >= 0:
             done_through = saved.stage_index
+            # O ponto é DA diarização e as opções de quem fala mudaram: ele
+            # vale até a etapa anterior. A transcrição continua boa; só a
+            # separação de falantes precisa ser refeita.
+            if (
+                saved.stage == "diarize"
+                and saved.diarize_key
+                and saved.diarize_key != diarize_fingerprint(options)
+            ):
+                done_through = stage_index("align")
+                log.info("Opções de quem fala mudaram: refazendo só a diarização.")
             saved_wav = saved.wav_path
             # Só herdamos o conteúdo; identidade e ambiente são desta execução.
             result.segments = saved.result.segments
@@ -305,13 +321,24 @@ def process_media(
         # ------------------------------------------------------------ diarize --
         if options.diarize and audio_ready and result.segments and not already_done("diarize"):
             report_progress("diarize", 0.85, "identificando falantes")
+
+            def diarize_progress(fraction: float, message: str) -> None:
+                # A etapa ocupa a faixa de 85% a 91%; o resto é a gravação.
+                report_progress("diarize", 0.85 + fraction * 0.06, message)
+
             with clock.measure("diarize"):
-                diarization = run_diarization(wav_path, options, segments=result.segments)
+                diarization = run_diarization(
+                    wav_path, options, segments=result.segments,
+                    progress=diarize_progress,
+                )
             result.diarization = diarization
             if not diarization.available:
                 partial_failures.append(f"Diarização: {diarization.reason}")
             if store is not None:
-                store.save("diarize", result, wav=wav_path)
+                store.save(
+                    "diarize", result, wav=wav_path,
+                    diarize_key=diarize_fingerprint(options),
+                )
         elif already_done("diarize"):
             clock.skip("diarize", "falantes já identificados no ponto de retomada")
         else:

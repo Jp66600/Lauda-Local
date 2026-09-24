@@ -1416,6 +1416,8 @@ class SideNav(tk.Frame):
         self._background = background
         self._items: list[tuple[NavItem, tk.Widget]] = []
         self._current: tk.Widget | None = None
+        #: Chamado com a página que acabou de aparecer.
+        self.on_change: Callable[[tk.Widget], None] | None = None
 
         self.top = tk.Frame(self, background=background, highlightthickness=0)
         self.top.pack(side="top", fill="x", padx=10, pady=(12, 0))
@@ -1447,7 +1449,11 @@ class SideNav(tk.Frame):
                 alvo.pack(fill="both", expand=True)
             else:
                 alvo.pack_forget()
-        self._current = frame
+        anterior, self._current = self._current, frame
+        # Quem abre uma página espera vê-la atualizada. Sem este aviso, a
+        # página só se atualizaria ao ser construída.
+        if self.on_change is not None and anterior is not frame:
+            self.on_change(frame)
         return None
 
     def apply_theme(

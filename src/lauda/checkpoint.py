@@ -7,8 +7,8 @@ ponto salvo. Na prática, o que se ganha é não transcrever duas vezes.
 
 Onde ficam: `~/.lauda/checkpoints/<chave>/`. A chave junta o SHA-256 do
 arquivo de entrada com uma impressão digital das opções que mudam o resultado
-pesado (modelo, idioma, VAD, diarização...). Trocar a pasta de saída ou pedir
-legenda **não** invalida o ponto salvo; trocar o modelo, sim.
+pesado (modelo, idioma, VAD...). Trocar a pasta de saída, pedir legenda ou mexer
+em "quem fala" **não** invalida o ponto salvo; trocar o modelo, sim.
 
 O WAV extraído é guardado junto, senão a retomada teria que reconverter o
 áudio — que é justamente o segundo passo mais caro.
@@ -54,11 +54,18 @@ def stage_index(stage: str) -> int:
 
 
 def options_fingerprint(options: JobOptions) -> str:
-    """Impressão digital das opções que afetam as etapas caras.
+    """Impressão digital das opções que afetam a **transcrição**.
 
-    Só entra aqui o que muda o *conteúdo* do trabalho pesado. Pasta de saída,
+    Só entra aqui o que muda o conteúdo do trabalho pesado. Pasta de saída,
     formatos de legenda e afins ficam de fora de propósito: mudá-los não
     justifica transcrever tudo de novo.
+
+    As opções de **diarização ficam de fora** por um motivo prático: ela roda
+    depois da transcrição, então mudar "quem fala" — ou desligá-la — não
+    invalida uma transcrição pronta. Quando isso não era assim, uma falha na
+    diarização fazia o supervisor transcrever o arquivo inteiro de novo a cada
+    tentativa, e o usuário esperava horas para não receber nada. O que protege
+    o caso em que o ponto salvo É da diarização está em `diarize_fingerprint`.
     """
     relevant = {
         "model": options.model,
@@ -72,6 +79,18 @@ def options_fingerprint(options: JobOptions) -> str:
         "vad": options.vad,
         "word_timestamps": options.word_timestamps,
         "condition_on_previous_text": options.condition_on_previous_text,
+    }
+    payload = json.dumps(relevant, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
+def diarize_fingerprint(options: JobOptions) -> str:
+    """Impressão digital só das opções de quem fala.
+
+    Guardada junto com o ponto salvo: se o ponto for **da** diarização e estas
+    opções tiverem mudado, ele volta uma etapa em vez de valer como está.
+    """
+    relevant = {
         "diarize": options.diarize,
         "diarize_backend": options.diarize_backend,
         "num_speakers": options.num_speakers,
@@ -98,6 +117,8 @@ class Checkpoint:
     wav_path: Path | None
     attempts: int
     saved_at: float
+    #: Digital das opcoes de quem fala quando o ponto foi salvo.
+    diarize_key: str = ""
 
     @property
     def stage_index(self) -> int:
@@ -150,6 +171,7 @@ class CheckpointStore:
         *,
         wav: Path | None = None,
         attempts: int = 0,
+        diarize_key: str = "",
     ) -> None:
         """Grava o estado depois de uma etapa. Nunca levanta para o pipeline."""
         try:
@@ -171,6 +193,7 @@ class CheckpointStore:
                 "attempts": attempts,
                 "saved_at": time.time(),
                 "wav": str(self.wav_path) if self.wav_path.exists() else None,
+                "diarize_key": diarize_key,
                 "result": to_json_dict(result),
             }
             # Escrita atômica: um ponto de retomada pela metade é pior que nenhum.
@@ -224,6 +247,7 @@ class CheckpointStore:
             wav_path=wav,
             attempts=int(payload.get("attempts", 0)),
             saved_at=saved_at,
+            diarize_key=str(payload.get("diarize_key", "")),
         )
 
     # --------------------------------------------------------------- limpeza --

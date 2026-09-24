@@ -602,6 +602,7 @@ class LaudaApp:
         self._build_help_page()
         self._build_settings_page()
 
+        self.nav.on_change = self._on_page_changed
         self._register_prefs()
         self._refresh_prefs_summary()
         self._set_text(self.text_help, STEPS_TEXT)
@@ -1215,6 +1216,13 @@ class LaudaApp:
         self._scrollbars.append(self.transcript_scroll)
         self.transcript_canvas.configure(yscrollcommand=self.transcript_scroll.set)
 
+        self.button_transcript_refresh = RoundedButton(
+            moldura, text="Atualizar", command=self.refresh_transcripts,
+            font=self.font_small, radius=11,
+        )
+        self.button_transcript_refresh.grid(row=0, column=2, sticky="n", padx=(8, 0))
+        self._buttons.append(self.button_transcript_refresh)
+
         self.transcript_buttons: dict[str, TabButton] = {}
 
         self.transcript_label = ttk.Label(
@@ -1345,6 +1353,35 @@ class LaudaApp:
             self.transcript_buttons[entrada.transcript_path] = botao
 
         self.show_transcript(atual)
+
+    def _on_page_changed(self, page: tk.Widget) -> None:
+        """Abrir uma página a atualiza. Tela velha é tela errada."""
+        if page is getattr(self, "tab_plain", None):
+            self.refresh_transcripts()
+        elif page is getattr(self, "tab_files", None):
+            self._refresh_files_page()
+
+    def refresh_transcripts(self) -> None:
+        """Relê a pasta de saída: entra o que apareceu, sai o que foi apagado.
+
+        Mantém a aba que estava aberta, se o arquivo dela continuar lá — quem
+        clicou em "Atualizar" quer ver o que mudou, não perder o lugar.
+        """
+        antes = set(self.transcript_buttons)
+        self._refresh_transcript_tabs()
+        depois = set(self.transcript_buttons)
+
+        novas, sumiram = len(depois - antes), len(antes - depois)
+        if novas or sumiram:
+            partes = []
+            if novas:
+                partes.append(f"{novas} transcrição(ões) nova(s)")
+            if sumiram:
+                partes.append(f"{sumiram} sumiu(ram) da pasta")
+            self.status_label.configure(
+                text="Transcrições atualizadas: " + " e ".join(partes) + ".",
+                foreground=self.theme.ink_soft,
+            )
 
     def _on_tabs_resized(self, _event: tk.Event) -> None:
         """A área das abas cresce até três linhas; daí em diante ela rola."""

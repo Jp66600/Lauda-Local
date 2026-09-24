@@ -414,8 +414,10 @@ def section_interface() -> list:
             "passa a mostrar o laudo completo, já formatado.",
             "<b>Transcrição</b> — o texto corrido, com <b>uma aba para cada "
             "transcrição que existe na pasta de saída</b> — inclusive as de outro "
-            "dia, feitas antes. Trocou a pasta, trocam as abas. Embaixo do texto, "
-            "três botões: "
+            "dia, feitas antes. Trocou a pasta, trocam as abas. A lista se atualiza "
+            "quando você abre a página e quando um trabalho termina; o botão "
+            "<b>Atualizar</b>, ao lado das abas, serve para quando você mexer na "
+            "pasta por fora. Embaixo do texto, três botões: "
             "<b>Abrir o local do arquivo</b> (a pasta de saída abre com o .txt já "
             "selecionado, pronto para copiar), <b>Copiar o texto</b> e <b>Abrir o "
             "laudo deste arquivo</b>. Acima do texto, o nome do arquivo, a duração, "

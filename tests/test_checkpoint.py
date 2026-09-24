@@ -191,3 +191,62 @@ def test_purge_remove_so_os_velhos(tmp_path: Path):
     assert purge_old(root=tmp_path) == 1
     assert novo.directory.exists()
     assert not velho.directory.exists()
+
+
+# --------------------------------------------------------------------------- #
+# Diarização fora da digital: ela roda DEPOIS da transcrição
+# --------------------------------------------------------------------------- #
+def test_desligar_quem_fala_nao_invalida_a_transcricao(tmp_path: Path):
+    """Mudar a diarização não pode custar uma transcrição de uma hora.
+
+    Era o que acontecia: quando a diarização travava, o supervisor tentava de
+    novo com outro modelo, a digital mudava e o arquivo inteiro era
+    transcrito do zero — três vezes, para no fim não entregar nada.
+    """
+    a = options_fingerprint(_options(tmp_path, diarize=True))
+    b = options_fingerprint(_options(tmp_path, diarize=False))
+    assert a == b
+
+
+def test_mudar_o_numero_de_falantes_nao_invalida(tmp_path: Path):
+    a = options_fingerprint(_options(tmp_path, diarize=True, num_speakers=2))
+    b = options_fingerprint(_options(tmp_path, diarize=True, num_speakers=5))
+    assert a == b
+
+
+def test_a_digital_de_quem_fala_separa_o_que_mudou(tmp_path: Path):
+    from lauda.checkpoint import diarize_fingerprint
+
+    base = diarize_fingerprint(_options(tmp_path, diarize=True))
+    assert base != diarize_fingerprint(_options(tmp_path, diarize=False))
+    assert base != diarize_fingerprint(_options(tmp_path, diarize=True, num_speakers=3))
+    assert base == diarize_fingerprint(_options(tmp_path, diarize=True))
+    # E o que é da transcrição não entra nela.
+    assert base == diarize_fingerprint(_options(tmp_path, diarize=True, model="tiny"))
+
+
+def test_o_ponto_guarda_a_digital_de_quem_fala(tmp_path: Path):
+    from tests_helpers import make_result
+
+    from lauda.checkpoint import CheckpointStore, diarize_fingerprint
+
+    opcoes = _options(tmp_path, diarize=True)
+    store = CheckpointStore("chave", root=tmp_path / "cp")
+    store.save("diarize", make_result(), diarize_key=diarize_fingerprint(opcoes))
+
+    salvo = store.load()
+    assert salvo is not None
+    assert salvo.diarize_key == diarize_fingerprint(opcoes)
+
+
+def test_ponto_antigo_sem_a_digital_continua_valendo(tmp_path: Path):
+    """Quem já tinha ponto salvo não pode perdê-lo por causa do campo novo."""
+    from tests_helpers import make_result
+
+    from lauda.checkpoint import CheckpointStore
+
+    store = CheckpointStore("chave", root=tmp_path / "cp")
+    store.save("align", make_result())
+
+    salvo = store.load()
+    assert salvo is not None and salvo.diarize_key == ""

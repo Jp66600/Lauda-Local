@@ -409,3 +409,46 @@ def test_maquina_que_nao_deixa_congelar_avisa_em_vez_de_mentir(
     assert resultado.text, "o trabalho continua mesmo sem conseguir pausar"
     assert len(tentativas) == 1
     assert any(kind == "pausa_falhou" for kind, _ in avisos)
+
+
+# --------------------------------------------------------------------------- #
+# Rebaixamento da etapa que falhou
+# --------------------------------------------------------------------------- #
+def test_travou_na_diarizacao_desliga_a_diarizacao(entrada: Path, tmp_path: Path):
+    """E mantém o modelo: trocá-lo jogaria fora a transcrição já pronta."""
+    opcoes = _options(entrada, tmp_path, diarize=True, model="large-v3")
+
+    degradado, como = _degrade(opcoes, 2, "diarize")
+
+    assert degradado.diarize is False
+    assert degradado.model == "large-v3", "a transcrição pronta tem de continuar valendo"
+    assert degradado.limits.use_gpu, "a GPU não tem nada a ver com o travamento"
+    assert "quem fala" in como
+
+
+def test_travou_na_transcricao_rebaixa_o_ambiente(entrada: Path, tmp_path: Path):
+    """Sem etapa culpada identificável, vale a escada de sempre."""
+    opcoes = _options(entrada, tmp_path, diarize=True)
+
+    degradado, como = _degrade(opcoes, 2, "asr")
+
+    assert degradado.diarize is True, "não mexe no que não falhou"
+    assert not degradado.limits.use_gpu
+    assert "GPU" in como
+
+
+def test_diarizacao_ja_desligada_cai_na_escada_normal(entrada: Path, tmp_path: Path):
+    opcoes = _options(entrada, tmp_path, diarize=False)
+
+    degradado, como = _degrade(opcoes, 2, "diarize")
+
+    assert not degradado.limits.use_gpu or degradado.model != opcoes.model
+    assert "quem fala" not in como
+
+
+def test_miniaturas_e_resumo_tambem_saem_quando_sao_a_causa(entrada: Path, tmp_path: Path):
+    visual, _ = _degrade(_options(entrada, tmp_path, visual=True), 2, "visual")
+    resumo, _ = _degrade(_options(entrada, tmp_path, summarize=True), 2, "summarize")
+
+    assert visual.visual is False
+    assert resumo.summarize is False
