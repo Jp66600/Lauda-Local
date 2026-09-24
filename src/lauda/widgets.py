@@ -1015,11 +1015,14 @@ class RoundedScrollbar(tk.Canvas):
             background=background,
             **kwargs,
         )
-        # A espessura é fixa; o comprimento vem do `grid`.
+        # A espessura é fixa; o comprimento vem do `grid`. O outro lado precisa
+        # pedir 1px: um `tk.Canvas` sem tamanho pede ~265px por padrão, e esse
+        # pedido estica a linha (ou a coluna) inteira do grid — foi o que
+        # abriu um vão acima e abaixo das abas de transcrição.
         if orient == "vertical":
-            tk.Canvas.configure(self, width=thickness)
+            tk.Canvas.configure(self, width=thickness, height=1)
         else:
-            tk.Canvas.configure(self, height=thickness)
+            tk.Canvas.configure(self, height=thickness, width=1)
         self.bind("<Configure>", lambda _e: self.redraw(), add="+")
         self.bind("<Button-1>", self._press, add="+")
         self.bind("<B1-Motion>", self._drag, add="+")

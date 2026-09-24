@@ -1198,7 +1198,7 @@ class LaudaApp:
             moldura, height=TAB_ROW_HEIGHT, highlightthickness=0, borderwidth=0,
             background=self.theme.paper,
         )
-        self.transcript_canvas.grid(row=0, column=0, sticky="ew")
+        self.transcript_canvas.grid(row=0, column=0, sticky="nsew")
         self.transcript_tabs = tk.Frame(
             self.transcript_canvas, background=self.theme.paper
         )
@@ -1389,9 +1389,14 @@ class LaudaApp:
             scrollregion=self.transcript_canvas.bbox("all")
         )
         pedido = self.transcript_tabs.winfo_reqheight()
-        self.transcript_canvas.configure(
-            height=max(TAB_ROW_HEIGHT, min(pedido, TAB_ROW_HEIGHT * TAB_MAX_ROWS))
-        )
+        altura = max(TAB_ROW_HEIGHT, min(pedido, TAB_ROW_HEIGHT * TAB_MAX_ROWS))
+        self.transcript_canvas.configure(height=altura)
+
+        # Cabe tudo? A barra sai da frente em vez de ficar como enfeite.
+        if pedido <= altura:
+            self.transcript_scroll.grid_remove()
+        else:
+            self.transcript_scroll.grid()
 
     def _transcript_command(self, caminho: str) -> Callable[[], None]:
         return lambda: self.show_transcript(caminho)

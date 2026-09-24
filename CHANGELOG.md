@@ -2,6 +2,18 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.13.1-beta] — 2026-09-24
+
+### Corrigido
+
+- **A área das abas da Transcrição tinha um vão acima e abaixo.** A barra de
+  rolagem é um `tk.Canvas`, e um Canvas sem tamanho pede ~265 px de altura por
+  padrão: esse pedido esticava a linha do grid, e as abas ficavam boiando no
+  meio dela. Agora a barra pede 1 px no sentido em que ela se estica, e a área
+  tem exatamente a altura das abas.
+- A barra de rolagem **some** quando todas as abas cabem, em vez de ficar de
+  enfeite.
+
 ## [0.13.0-beta] — 2026-09-24
 
 ### Corrigido — uma transcrição pronta deixou de ser jogada fora

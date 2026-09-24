@@ -1941,3 +1941,40 @@ def test_abrir_a_pagina_transcricao_atualiza(app, tmp_path: Path):
     app.nav.select(app.tab_plain)        # e volta para ela
 
     assert len(app.transcript_buttons) == 2, "abrir a página relê a pasta"
+
+
+def test_a_area_das_abas_nao_sobra_espaco(app, tmp_path: Path):
+    """A barra de rolagem pedia ~265 px de altura e esticava a linha inteira,
+    deixando um vão acima e abaixo das abas."""
+    for indice in range(4):
+        _trabalho(app, tmp_path, f"arquivo{indice}.mp4", "texto")
+    app.root.update_idletasks()
+
+    pedido = app.transcript_tabs.winfo_reqheight()
+    assert int(app.transcript_canvas.cget("height")) == pedido, "nada de vão"
+    assert app.transcript_scroll.winfo_manager() == "", "cabe tudo: a barra sai da frente"
+
+
+def test_com_abas_demais_a_barra_aparece_e_a_altura_para_no_teto(app, tmp_path: Path):
+    from lauda.desktop import TAB_MAX_ROWS, TAB_ROW_HEIGHT
+
+    for indice in range(14):
+        _trabalho(app, tmp_path, f"arquivo{indice}.mp4", "texto")
+    app.root.update_idletasks()
+
+    assert int(app.transcript_canvas.cget("height")) == TAB_ROW_HEIGHT * TAB_MAX_ROWS
+    assert app.transcript_scroll.winfo_manager() == "grid", "agora ela serve para algo"
+
+
+def test_a_barra_de_rolagem_nao_pede_altura_de_canvas(app):
+    """`tk.Canvas` sem tamanho pede ~265 px — e isso estica quem estiver junto."""
+    from lauda.widgets import RoundedScrollbar
+
+    vertical = RoundedScrollbar(app.root, orient="vertical")
+    horizontal = RoundedScrollbar(app.root, orient="horizontal")
+
+    assert vertical.winfo_reqheight() == 1
+    assert horizontal.winfo_reqwidth() == 1
+    assert vertical.winfo_reqwidth() > 1, "a espessura continua fixa"
+    vertical.destroy()
+    horizontal.destroy()
