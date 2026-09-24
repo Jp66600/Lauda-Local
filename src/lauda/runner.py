@@ -166,7 +166,7 @@ def run_with_recovery(
 
             outcome = _run_once(
                 job_path, report, attempt, stall_timeout=stall_timeout,
-                cancel=cancel, pause=pause,
+                cancel=cancel, pause=pause, notify=notify,
             )
             if outcome == "cancelado":
                 raise RecoveryFailed("Processamento cancelado.")
@@ -202,6 +202,7 @@ def _run_once(
     stall_timeout: float,
     cancel: threading.Event | None,
     pause: threading.Event | None = None,
+    notify: EventFn | None = None,
 ) -> str:
     """Uma tentativa. Devolve "ok", "travou", "falhou" ou "cancelado"."""
     command = _worker_command(job_path)
@@ -249,31 +250,57 @@ def _run_once(
     reader = threading.Thread(target=pump, daemon=True)
     reader.start()
 
+    aviso = notify or (lambda kind, message: None)
+
+    def notify_pause_failed() -> None:
+        aviso(
+            "pausa_falhou",
+            "Não consegui pausar o processamento nesta máquina; ele continua "
+            "rodando. Para parar de verdade, use o cancelamento.",
+        )
+
     outcome = "falhou"
     done = False
     pausado = False
+    pediu_pausa = False
     while True:
         if cancel is not None and cancel.is_set():
             # Matar um processo congelado deixa zumbi em alguns sistemas:
-            # descongela primeiro, mata depois.
-            if pausado:
+            # descongela primeiro, mata depois. Sem condição: se a tentativa de
+            # congelar falhou pela metade, descongelar de novo não custa nada e
+            # o contrário custa um processo preso.
+            if pediu_pausa:
                 _resume(process)
             _kill(process)
             return "cancelado"
 
         if pause is not None and pause.is_set():
-            if not pausado:
+            if not pediu_pausa:
+                pediu_pausa = True
                 pausado = _suspend(process)
                 if pausado:
                     log.info("Processamento pausado (processo %s congelado).", process.pid)
+                else:
+                    # Sem poder congelar, o trabalho CONTINUA. Dizer "pausado"
+                    # numa tela enquanto a máquina segue a todo vapor seria
+                    # mentira — então quem chamou fica sabendo.
+                    log.warning(
+                        "Não consegui congelar o processo %s; o trabalho continua.",
+                        process.pid,
+                    )
+                    notify_pause_failed()
             # Enquanto está parado, o relógio do watchdog não corre — senão
             # pausar por cinco minutos seria o mesmo que matar o trabalho.
             last_signal = time.monotonic()
             time.sleep(0.1)
             continue
 
-        if pausado:
-            pausado = not _resume(process)
+        if pediu_pausa:
+            if pausado:
+                pausado = not _resume(process)
+            else:
+                _resume(process)          # inofensivo se nunca congelou
+            pediu_pausa = False
             last_signal = time.monotonic()
             log.info("Processamento retomado.")
 

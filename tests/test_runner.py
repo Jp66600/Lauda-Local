@@ -307,10 +307,10 @@ def test_pausado_nao_conta_como_travado(entrada: Path, tmp_path: Path, monkeypat
     import time
 
     script = _fake_worker(tmp_path, """
-        emit({'t': 'progress', 'stage': 'asr', 'fraction': 0.5, 'message': 'meio'})
-        time.sleep(0.4)
         sys.path.insert(0, %r)
-        from tests_helpers import write_fake_result
+        from tests_helpers import write_fake_result   # importa antes do silêncio
+        emit({'t': 'progress', 'stage': 'asr', 'fraction': 0.5, 'message': 'meio'})
+        time.sleep(0.2)
         write_fake_result(job['result_path'])
         emit({'t': 'done', 'result': job['result_path']})
     """ % str(Path(__file__).parent))
@@ -319,13 +319,16 @@ def test_pausado_nao_conta_como_travado(entrada: Path, tmp_path: Path, monkeypat
     pausa = threading.Event()
     pausa.set()
     threading.Thread(
-        target=lambda: (time.sleep(1.0), pausa.clear()), daemon=True
+        target=lambda: (time.sleep(4.0), pausa.clear()), daemon=True
     ).start()
 
-    # Teto de travamento BEM menor que o tempo pausado: sem a trégua, o
-    # supervisor mataria o filho antes de ele poder terminar.
+    # Pausa (4 s) BEM maior que o teto de travamento (1 s, que vira 3 s na
+    # etapa asr): sem a trégua, o supervisor mataria o filho antes de ele
+    # poder terminar. A folga depois de retomado é de propósito — numa máquina
+    # lenta, importar e gravar o resultado não pode ser confundido com
+    # travamento e transformar este teste em loteria.
     resultado, tentativas = run_with_recovery(
-        _options(entrada, tmp_path), pause=pausa, stall_timeout=0.3,
+        _options(entrada, tmp_path), pause=pausa, stall_timeout=1.0,
         checkpoint_root=tmp_path / "cp",
     )
 
@@ -351,6 +354,8 @@ def test_cancelar_durante_a_pausa_descongela_antes_de_matar(
     monkeypatch.setattr(
         runner, "_resume", lambda p: (soltos.append(p.pid), original(p))[1]
     )
+    # Vale mesmo se congelar nao funcionar nesta maquina: descongelar antes de
+    # matar tem de acontecer de qualquer jeito.
 
     pausa, cancelar = threading.Event(), threading.Event()
     pausa.set()
@@ -365,3 +370,42 @@ def test_cancelar_durante_a_pausa_descongela_antes_de_matar(
         )
 
     assert soltos, "descongelou antes de matar"
+
+
+def test_maquina_que_nao_deixa_congelar_avisa_em_vez_de_mentir(
+    entrada: Path, tmp_path: Path, monkeypatch
+):
+    """Sem poder congelar, o trabalho continua — e quem chamou fica sabendo.
+
+    Uma tela dizendo "Pausado" enquanto a máquina segue a todo vapor é pior
+    que não ter o botão.
+    """
+    import threading
+
+    script = _fake_worker(tmp_path, """
+        sys.path.insert(0, %r)
+        from tests_helpers import write_fake_result
+        emit({'t': 'progress', 'stage': 'asr', 'fraction': 0.5, 'message': 'meio'})
+        time.sleep(0.2)
+        write_fake_result(job['result_path'])
+        emit({'t': 'done', 'result': job['result_path']})
+    """ % str(Path(__file__).parent))
+    _use_fake(monkeypatch, script)
+    monkeypatch.setattr(runner, "_suspend", lambda _p: False)
+
+    avisos: list[tuple[str, str]] = []
+    pausa = threading.Event()
+    pausa.set()
+    threading.Thread(
+        target=lambda: (__import__("time").sleep(0.7), pausa.clear()), daemon=True
+    ).start()
+
+    resultado, tentativas = run_with_recovery(
+        _options(entrada, tmp_path), pause=pausa,
+        on_event=lambda kind, msg: avisos.append((kind, msg)),
+        checkpoint_root=tmp_path / "cp",
+    )
+
+    assert resultado.text, "o trabalho continua mesmo sem conseguir pausar"
+    assert len(tentativas) == 1
+    assert any(kind == "pausa_falhou" for kind, _ in avisos)

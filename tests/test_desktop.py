@@ -1865,3 +1865,20 @@ def test_terminar_devolve_o_botao_ao_repouso(app, tmp_path: Path):
     assert not app.pause_event.is_set()
     assert str(app.pause_button["state"]) == "disabled"
     assert app.pause_button._text == "Pausar"
+
+
+def test_quando_a_maquina_nao_deixa_pausar_o_botao_volta_atras(app, silent_video: Path):
+    """A tela não pode dizer "Pausado" com a máquina a todo vapor."""
+    app._accept_file(silent_video)
+    app.worker = types.SimpleNamespace(is_alive=lambda: True)
+    app.pause_button.configure(state="normal")
+    app.toggle_pause()
+    assert app.pause_event.is_set()
+
+    app._on_recovery("pausa_falhou", "Não consegui pausar nesta máquina.")
+
+    assert not app.pause_event.is_set()
+    assert app.pause_button._text == "Pausar"
+    assert "Não consegui pausar" in app.status_label.cget("text")
+    assert "Trabalhando" in app.state_label.cget("text")
+    app.worker = None

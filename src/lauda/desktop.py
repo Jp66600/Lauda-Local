@@ -2626,7 +2626,19 @@ class LaudaApp:
         return max(0.0, decorrido / fraction - decorrido)
 
     def _on_recovery(self, kind: str, message: str) -> None:
-        """Avisos do supervisor: travou, reiniciando, desistiu."""
+        """Avisos do supervisor: travou, reiniciando, desistiu, pausa_falhou."""
+        if kind == "pausa_falhou":
+            # A tela dizia "Pausado" e a máquina continuava a todo vapor. O
+            # botão volta atrás em vez de sustentar a mentira.
+            self.pause_event.clear()
+            self._paused_at = None
+            self.pause_button.configure(text="Pausar")
+            self._set_state("Trabalhando", self.theme.accent)
+            self.stepper.set_note("")
+            self.status_label.configure(text=message, foreground=self.theme.accent_warm)
+            log.warning("Pausa indisponivel: %s", message)
+            return
+
         cor = self.theme.danger if kind == "desistiu" else self.theme.accent_warm
         self.status_label.configure(text=message, foreground=cor)
         self._set_state("Recuperando", cor)
