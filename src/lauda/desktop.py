@@ -175,6 +175,11 @@ STAGE_LABELS = {
 #: qualidade, os interruptores de recurso e a pasta de saída.
 JOB_PREFS_KEY = "job"
 
+#: Sobe quando um padrão muda e a preferência **já gravada** precisa ceder.
+#: Serve para uma coisa só, e raramente: sem ela, um padrão novo nunca chega a
+#: quem já usava o programa. A 2 ligou a legenda .srt.
+PREFS_VERSION = 2
+
 #: Quanto esperar antes de gravar. Digitar um caminho dispara um evento por
 #: tecla — sem isto, seriam dezenas de escritas em disco para uma escolha só.
 PREFS_SAVE_DELAY_MS = 500
@@ -226,7 +231,10 @@ O QUE VOCÊ RECEBE
                              com marcação de tempo
   transcricao (.transcript)   só o texto corrido, para copiar e colar
   dados (.data.json)          os mesmos dados em formato de programa
-  legendas (.srt / .vtt)      se você ligar a opção
+  legenda (.srt)              a mesma fala do laudo com tempo de entrada
+                             e de saída, pronta para o player
+  legenda (.vtt)              o mesmo, no formato de vídeo na web, se você
+                             ligar a opção
 
 
 BOM SABER
@@ -270,10 +278,13 @@ PAGE_SUBTITLES = PageSpec(
     title="Legendas",
     icon="film",
     suffixes=(".srt", ".vtt"),
-    empty="As legendas aparecem aqui depois de processar.\n\n"
-          "Ligue .srt ou .vtt nos recursos do trabalho — cada arquivo gerado "
-          "vira uma aba acima, com os tempos de entrada e saída.",
+    empty="Nenhuma legenda nesta pasta ainda.\n\n"
+          "A legenda sai junto com o laudo em todo trabalho novo. Para os que "
+          "já foram feitos, o botão \"Gerar as que faltam\" cria a legenda a "
+          "partir do .data.json do trabalho — os mesmos trechos que o laudo "
+          "imprime no [BLOCO B], sem transcrever nada de novo.",
     label_suffix=True,
+    backfill=True,
 )
 
 
@@ -713,10 +724,18 @@ class LaudaApp:
         if isinstance(pasta, str) and pasta.strip():
             self.folder_var.set(pasta)
 
-        for chave in (
+        # Quem usou a versão anterior tem "srt": false gravado — o padrão de
+        # então. Restaurar esse valor manteria a legenda desligada justamente
+        # para quem já é usuário, que é quem sente falta dela. A virada vale
+        # uma vez só: depois disso a escolha volta a ser de quem usa.
+        interruptores = [
             "diarize", "words", "srt", "vtt", "visual", "summarize", "fast",
             "open_folder", "subs_beside",
-        ):
+        ]
+        if int(guardado.get("prefs_version") or 0) < PREFS_VERSION:
+            interruptores.remove("srt")
+
+        for chave in interruptores:
             if chave in guardado:
                 self._prefs_vars[chave].set(bool(guardado[chave]))
 
@@ -736,7 +755,10 @@ class LaudaApp:
             return
         save_value(
             JOB_PREFS_KEY,
-            {chave: variavel.get() for chave, variavel in self._prefs_vars.items()},
+            {
+                "prefs_version": PREFS_VERSION,
+                **{chave: variavel.get() for chave, variavel in self._prefs_vars.items()},
+            },
         )
 
     # ------------------------------------------------- registro ao vivo --
@@ -1001,7 +1023,7 @@ class LaudaApp:
 
         self.var_diarize = tk.BooleanVar(value=False)
         self.var_words = tk.BooleanVar(value=False)
-        self.var_srt = tk.BooleanVar(value=False)
+        self.var_srt = tk.BooleanVar(value=True)
         self.var_vtt = tk.BooleanVar(value=False)
         self.var_visual = tk.BooleanVar(value=False)
         self.var_summarize = tk.BooleanVar(value=False)
@@ -1470,10 +1492,11 @@ class LaudaApp:
         self.model_var.set(MODEL_LABELS[2][0])
         self.folder_var.set(str(self.output_dir))
         for variavel in (
-            self.var_diarize, self.var_words, self.var_srt,
+            self.var_diarize, self.var_words,
             self.var_vtt, self.var_visual, self.var_summarize, self.var_fast,
         ):
             variavel.set(False)
+        self.var_srt.set(True)   # o padrão da legenda é sair, não faltar
         self._save_prefs()
         self._refresh_prefs_summary()
 
@@ -2859,8 +2882,23 @@ class LaudaApp:
         """
         try:
             if sys.platform == "win32":
-                # O explorer exige /select,<caminho> junto, sem espaço.
-                subprocess.Popen(["explorer", f"/select,{path}"])
+                # O `/select,` e o caminho são UM argumento só, mas as aspas
+                # ficam por dentro: `/select,"C:\\a b\\c.txt"`. Mandar a lista
+                # ["explorer", "/select,C:\\a b\\c.txt"] faz o Python envolver o
+                # argumento inteiro — vira `"/select,C:\\a b\\c.txt"` —, o
+                # explorer não reconhece a opção, ignora o caminho e abre a
+                # pasta padrão dele, Documentos. Era esse o defeito: só
+                # aparecia quando a pasta de saída tinha espaço no nome, como
+                # em "Lauda Local".
+                #
+                # Por isso a linha de comando vai montada. Não é shell: no
+                # Windows uma string vai direto para o CreateProcess, sem
+                # interpretar `&` ou `|`, e nome de arquivo não pode conter
+                # aspas — não há o que escapar.
+                # No Windows o `os.environ` põe as chaves em maiúsculas.
+                raiz = os.environ.get("SYSTEMROOT", r"C:\Windows")
+                explorer = Path(raiz) / "explorer.exe"
+                subprocess.Popen(f'"{explorer}" /select,"{path}"')
             elif sys.platform == "darwin":
                 subprocess.Popen(["open", "-R", str(path)])
             else:

@@ -20,7 +20,9 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any
 
-from . import APP_NAME, history
+from . import APP_NAME, history, serialize
+from .cues import DENSITY_LABELS
+from .subtitles import write_srt, write_vtt
 from .widgets import RoundedButton, RoundedCard, RoundedScrollbar, TabButton, mix
 
 log = logging.getLogger("lauda.pages")
@@ -50,9 +52,15 @@ class PageSpec:
     #: próprio arquivo mostrado (na página que já É o laudo).
     third_button: str = "Abrir o laudo deste arquivo"
     third_opens: str = "report"          # "report" | "self"
-    #: Mostrar o sufixo no rótulo da aba. Só faz sentido quando a página junta
-    #: mais de um formato, como .srt e .vtt.
+    #: Acrescentar o formato ao rótulo da aba **quando ele for necessário para
+    #: distinguir** — o mesmo trabalho com .srt e .vtt daria duas abas de nome
+    #: igual. Quando só há um formato, o sufixo é repetição que rouba sete
+    #: caracteres do nome do arquivo, que é o que a pessoa procura.
     label_suffix: bool = False
+    #: Oferecer o botão que refaz o arquivo a partir do `.data.json`. Só a
+    #: página de legendas: o laudo e o texto corrido sempre saem, mas a legenda
+    #: pode faltar em trabalhos feitos quando ela ainda era opcional.
+    backfill: bool = False
 
 
 @dataclass
@@ -113,6 +121,15 @@ class FileTabsPage:
         self.button_refresh.grid(row=0, column=2, sticky="n", padx=(8, 0))
         app._buttons.append(self.button_refresh)
 
+        self.button_backfill: RoundedButton | None = None
+        if spec.backfill:
+            self.button_backfill = RoundedButton(
+                moldura, text="Gerar as que faltam", command=self.backfill,
+                font=app.font_small, radius=11,
+            )
+            self.button_backfill.grid(row=0, column=3, sticky="n", padx=(6, 0))
+            app._buttons.append(self.button_backfill)
+
         self.label = ttk.Label(
             card.body, text="", style="Hint.TLabel", justify="left", wraplength=760
         )
@@ -155,6 +172,13 @@ class FileTabsPage:
             return []
         achados.sort(key=lambda item: item[0], reverse=True)
 
+        # Duas abas do mesmo trabalho (o .srt e o .vtt) precisam do formato no
+        # rótulo; uma sozinha, não.
+        formatos: dict[str, int] = {}
+        for _quando, arquivo, sufixo in achados:
+            base = str(arquivo)[: -len(sufixo)]
+            formatos[base] = formatos.get(base, 0) + 1
+
         por_base = self._history_index()
         entradas: list[FileEntry] = []
         for _quando, arquivo, sufixo in achados:
@@ -162,7 +186,7 @@ class FileTabsPage:
             conhecido = por_base.get(base)
             nome = (conhecido.file_name if conhecido else "") or Path(base).name
             rotulo = history._cut(nome, LABEL_WIDTH)
-            if self.spec.label_suffix:
+            if self.spec.label_suffix and formatos[base] > 1:
                 rotulo = history._cut(nome, LABEL_WIDTH - len(sufixo) - 3) + f" ({sufixo})"
 
             detalhes = [nome]
@@ -286,10 +310,84 @@ class FileTabsPage:
                 partes.append(f"{novos} arquivo(s) novo(s)")
             if sumiram:
                 partes.append(f"{sumiram} sumiu(ram) da pasta")
-            self.app.status_label.configure(
-                text=f"{self.spec.title}: " + " e ".join(partes) + ".",
-                foreground=self.app.theme.ink_soft,
-            )
+            self._say(f"{self.spec.title}: " + " e ".join(partes) + ".")
+
+    def backfill(self) -> None:
+        """Escreve as legendas dos trabalhos que já estão feitos.
+
+        A legenda é o `[BLOCO B]` do laudo noutro formato: os mesmos trechos,
+        os mesmos tempos, o mesmo falante — só que num arquivo que o player
+        entende. Esses trechos ficam guardados no `.data.json` de cada
+        trabalho, então não há nada para transcrever de novo: é ler o que já
+        está em disco e escrever o arquivo que faltou.
+
+        Vale para quem processou antes de a legenda sair por padrão, e para
+        quem quiser trocar o tamanho das legendas sem refazer o trabalho — para
+        isso, apague a legenda antiga primeiro; o que existe não é sobrescrito.
+        """
+        pasta = Path(self.app.folder_var.get().strip() or ".")
+        formatos = [(".srt", write_srt)]
+        if bool(self.app.var_vtt.get()):
+            formatos.append((".vtt", write_vtt))
+        densidade = self.app._selected(self.app.density_var, DENSITY_LABELS)
+
+        feitos = 0
+        sem_trechos: list[str] = []
+        falharam: list[str] = []
+        ultimo: str | None = None
+
+        try:
+            dados = sorted(pasta.glob("*.data.json"))
+        except OSError as exc:
+            self._say(f"Não consegui ler a pasta {pasta}: {exc}", aviso=True)
+            return
+
+        for arquivo in dados:
+            base = str(arquivo)[: -len(".data.json")]
+            faltando = [par for par in formatos if not Path(base + par[0]).exists()]
+            if not faltando:
+                continue
+            try:
+                resultado = serialize.read_json(arquivo)
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                log.warning("Não consegui ler %s: %s", arquivo.name, exc)
+                falharam.append(f"{arquivo.name}: {exc}")
+                continue
+            if not resultado.segments:
+                # Trabalho que falhou antes de transcrever: tem .data.json, não
+                # tem fala. Não é erro, e dizer isso é melhor que nada mudar.
+                sem_trechos.append(Path(base).name)
+                continue
+            for sufixo, escrever in faltando:
+                try:
+                    ultimo = str(escrever(
+                        Path(base + sufixo), resultado.segments, density=densidade
+                    ))
+                except OSError as exc:
+                    log.warning("Não consegui escrever %s%s: %s", base, sufixo, exc)
+                    falharam.append(f"{Path(base).name}{sufixo}: {exc}")
+                    continue
+                feitos += 1
+                log.info("Legenda gerada de %s", arquivo.name)
+
+        partes: list[str] = []
+        if feitos:
+            partes.append(f"{feitos} legenda(s) criada(s) do que já estava processado")
+        if sem_trechos:
+            partes.append(f"{len(sem_trechos)} trabalho(s) sem fala guardada")
+        if falharam:
+            partes.append(f"{len(falharam)} não deu(deram) certo — veja o Registro")
+        if not partes:
+            partes.append("nada a fazer: todas as legendas já estão na pasta")
+        self._say(f"{self.spec.title}: " + "; ".join(partes) + ".", aviso=bool(falharam))
+
+        self.rebuild(ultimo)
+
+    def _say(self, texto: str, *, aviso: bool = False) -> None:
+        self.app.status_label.configure(
+            text=texto,
+            foreground=self.app.theme.accent_warm if aviso else self.app.theme.ink_soft,
+        )
 
     def open_folder(self) -> None:
         if self.current:

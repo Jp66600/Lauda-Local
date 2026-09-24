@@ -403,14 +403,14 @@ def test_o_interruptor_liga_e_desliga_no_clique(app):
     """O interruptor é desenhado no Canvas: o clique tem de continuar valendo."""
     from lauda.widgets import ToggleSwitch
 
-    switch = next(s for s in app._switches if s._variable is app.var_srt)
+    switch = next(s for s in app._switches if s._variable is app.var_vtt)
     assert isinstance(switch, ToggleSwitch)
 
-    assert app.var_srt.get() is False
+    assert app.var_vtt.get() is False
     _clique(switch)
-    assert app.var_srt.get() is True, "clicar tem de ligar"
+    assert app.var_vtt.get() is True, "clicar tem de ligar"
     _clique(switch)
-    assert app.var_srt.get() is False, "clicar de novo tem de desligar"
+    assert app.var_vtt.get() is False, "clicar de novo tem de desligar"
 
 
 def test_o_interruptor_acompanha_a_variavel(app, monkeypatch):
@@ -777,7 +777,8 @@ def test_perfil_corrompido_nao_impede_a_abertura(app, tk_root):
     janela.withdraw()
     outra = desktop.LaudaApp(janela)
     try:
-        assert outra.var_srt.get() is False, "sem preferências válidas, valem os padrões"
+        assert outra.var_srt.get() is True, "sem preferências válidas, valem os padrões"
+        assert outra.var_vtt.get() is False
     finally:
         outra.shutdown()
         janela.destroy()
@@ -840,21 +841,29 @@ def test_configuracoes_resume_o_que_esta_guardado(app):
     assert "Pasta de saída" in resumo
 
 
-def test_restaurar_padroes_desliga_tudo(app):
-    """Sem caminho de volta, uma opção esquecida ligada vira mistério."""
+def test_restaurar_padroes_volta_ao_padrao(app):
+    """Sem caminho de volta, uma opção esquecida ligada vira mistério.
+
+    "Padrão" não é "tudo desligado": a legenda .srt sai por padrão, e restaurar
+    tem de devolver exatamente o que uma instalação nova faria.
+    """
     from lauda.theme import load_value
 
     app.var_diarize.set(True)
     app.var_fast.set(True)
+    app.var_srt.set(False)
     app.model_var.set("Máxima qualidade — lento (large-v3)")
 
     app.reset_job_prefs()
 
     assert app.var_diarize.get() is False
     assert app.var_fast.get() is False
+    assert app.var_srt.get() is True
     assert app.model_var.get() == "Recomendado — equilibrado (small)"
     assert load_value("job", {})["diarize"] is False
-    assert "nenhum" in app.prefs_summary.cget("text")
+    assert load_value("job", {})["srt"] is True
+    assert app.prefs_summary.cget("text").count(".srt") == 1
+    assert ".vtt" not in app.prefs_summary.cget("text")
 
 
 # --------------------------------------------------------------------------- #
@@ -1442,12 +1451,12 @@ def test_a_rodada_seguinte_le_a_tela_de_novo(app, silent_video: Path):
     app.start()
     app.worker.join(5)
     app._advance_queue()            # fila vazia: solta o congelamento
-    app.var_srt.set(True)
+    app.var_srt.set(False)
     app.start()
     app.worker.join(5)
 
-    assert opcoes[0].write_srt is False
-    assert opcoes[1].write_srt is True, "sem fila, a próxima rodada usa a tela atual"
+    assert opcoes[0].write_srt is True
+    assert opcoes[1].write_srt is False, "sem fila, a próxima rodada usa a tela atual"
 
 
 # --------------------------------------------- página Desempenho (028/029) --
@@ -1771,16 +1780,30 @@ def test_o_botao_abre_a_pasta_com_o_arquivo_selecionado(app, tmp_path: Path, mon
 
 
 def test_no_windows_o_explorer_recebe_select(monkeypatch, tmp_path: Path):
-    """`explorer /select,<caminho>` é o que seleciona o arquivo na pasta."""
+    """`explorer /select,"<caminho>"` é o que seleciona o arquivo na pasta.
+
+    As aspas vão **por dentro** da opção. Mandando a lista de argumentos, o
+    Python envolveria `/select,<caminho>` inteiro em aspas assim que o caminho
+    tivesse espaço; o explorer não reconheceria a opção e abriria Documentos.
+    Era o que acontecia com a pasta de saída padrão, dentro de "Lauda Local".
+    """
     from lauda import desktop
 
     chamadas = []
     monkeypatch.setattr(desktop.sys, "platform", "win32")
     monkeypatch.setattr(desktop.subprocess, "Popen", lambda args: chamadas.append(args))
 
-    desktop.LaudaApp._reveal_in_folder(None, tmp_path / "a.txt")
+    pasta = tmp_path / "com espaco no nome"
+    pasta.mkdir()
+    alvo = pasta / "a.txt"
+    desktop.LaudaApp._reveal_in_folder(None, alvo)
 
-    assert chamadas == [["explorer", f"/select,{tmp_path / 'a.txt'}"]]
+    assert len(chamadas) == 1
+    linha = chamadas[0]
+    assert isinstance(linha, str)          # linha de comando, não lista
+    assert linha.endswith(f'/select,"{alvo}"')
+    assert linha.lower().startswith('"')   # o explorer.exe também vem entre aspas
+    assert "explorer.exe" in linha.lower()
 
 
 def test_copiar_leva_a_transcricao_mostrada(app, tmp_path: Path):
@@ -2029,6 +2052,18 @@ def test_legenda_mostra_srt_e_vtt_do_mesmo_trabalho(app, tmp_path: Path):
     assert any(".srt" in r for r in rotulos) and any(".vtt" in r for r in rotulos)
 
 
+def test_legenda_sozinha_nao_carrega_o_formato_no_rotulo(app, tmp_path: Path):
+    """Com um formato só, o `(.srt)` é repetição que come o nome do arquivo."""
+    _saida(app, "aula-de-quinta-feira-turma-B", ".srt", "1\n00:00:01,000 --> 00:00:02,000\noi\n")
+
+    app.page_subtitles.rebuild()
+
+    rotulo = next(iter(app.page_subtitles.buttons.values()))._text
+    assert ".srt" not in rotulo
+    # O corte é pelo meio, para manter as duas pontas do nome.
+    assert rotulo.startswith("aula-de-quin") and rotulo.endswith("turma-B")
+
+
 def test_a_legenda_mantem_os_tempos_como_no_arquivo(app, tmp_path: Path):
     conteudo = "1\n00:00:03,120 --> 00:00:05,900\n[SPEAKER_00] Boa noite.\n"
     _saida(app, "entrevista", ".srt", conteudo)
@@ -2107,3 +2142,160 @@ def test_da_legenda_o_botao_abre_o_laudo_do_trabalho(app, tmp_path: Path, monkey
     app.page_subtitles.open_third()
 
     assert abertos == [laudo]
+
+
+# ------------------------------------- legendas a partir do que já foi feito --
+def _dados(app, nome: str, *, trechos=True) -> Path:
+    """Grava um .data.json de verdade na pasta de saída, como um trabalho deixa."""
+    from tests_helpers import make_result
+
+    from lauda.serialize import write_json
+    from lauda.types import SegmentInfo
+
+    pasta = Path(app.folder_var.get())
+    pasta.mkdir(parents=True, exist_ok=True)
+    resultado = make_result("Boa noite a todos.")
+    if trechos:
+        resultado.segments = [
+            SegmentInfo(id=0, start=0.0, end=2.0, text="Boa noite a todos.",
+                        speaker="SPEAKER_00"),
+            SegmentInfo(id=1, start=9.0, end=12.0, text="Vamos começar.",
+                        speaker="SPEAKER_01"),
+        ]
+    else:
+        resultado.segments = []
+    return write_json(pasta / f"{nome}.data.json", resultado)
+
+
+def test_so_a_pagina_de_legendas_oferece_gerar_as_que_faltam(app):
+    """O laudo e o texto corrido sempre saem; só a legenda pode ter faltado."""
+    assert app.page_subtitles.button_backfill is not None
+    assert app.page_report.button_backfill is None
+    assert app.page_transcript.button_backfill is None
+
+
+def test_gerar_as_que_faltam_cria_a_legenda_do_que_ja_foi_processado(app):
+    """A legenda é o [BLOCO B] noutro formato: nada precisa ser transcrito."""
+    _dados(app, "reuniao")
+    app.page_subtitles.rebuild()
+    assert app.page_subtitles.buttons == {}
+
+    app.page_subtitles.backfill()
+
+    legenda = Path(app.folder_var.get()) / "reuniao.srt"
+    assert legenda.exists()
+    conteudo = legenda.read_text(encoding="utf-8")
+    assert "00:00:00,000 --> 00:00:02,000" in conteudo
+    assert "[SPEAKER_00] Boa noite a todos." in conteudo
+    assert "Vamos começar." in conteudo, "nenhum trecho pode se perder"
+    # E a aba aparece sem precisar de mais um clique.
+    assert len(app.page_subtitles.buttons) == 1
+    assert "1 legenda(s) criada(s)" in app.status_label.cget("text")
+
+
+def test_gerar_as_que_faltam_respeita_a_legenda_que_ja_existe(app):
+    """Refazer por cima apagaria ajuste manual. O que existe fica como está."""
+    _dados(app, "aula")
+    antiga = _saida(app, "aula", ".srt", "1\n00:00:00,000 --> 00:00:01,000\nà mão\n")
+
+    app.page_subtitles.backfill()
+
+    assert antiga.read_text(encoding="utf-8") == "1\n00:00:00,000 --> 00:00:01,000\nà mão\n"
+    assert "todas as legendas já estão na pasta" in app.status_label.cget("text")
+
+
+def test_gerar_as_que_faltam_faz_o_vtt_quando_ele_esta_ligado(app):
+    _dados(app, "podcast")
+    app.var_vtt.set(True)
+
+    app.page_subtitles.backfill()
+
+    pasta = Path(app.folder_var.get())
+    assert (pasta / "podcast.srt").exists()
+    assert (pasta / "podcast.vtt").read_text(encoding="utf-8").startswith("WEBVTT")
+    assert len(app.page_subtitles.buttons) == 2
+
+
+def test_gerar_as_que_faltam_usa_o_tamanho_escolhido(app):
+    """Trechos separados por 7 s de pausa não podem virar uma legenda só."""
+    from lauda.cues import DENSITY_LABELS
+
+    _dados(app, "debate")
+    app.density_var.set(DENSITY_LABELS[0][0])   # curta (1-2 s)
+
+    app.page_subtitles.backfill()
+
+    conteudo = (Path(app.folder_var.get()) / "debate.srt").read_text(encoding="utf-8")
+    assert conteudo.count(" --> ") >= 2
+
+
+def test_trabalho_sem_fala_guardada_nao_vira_legenda_vazia(app):
+    """Falhou antes de transcrever: tem .data.json, não tem o que legendar."""
+    _dados(app, "mudo", trechos=False)
+
+    app.page_subtitles.backfill()
+
+    assert not (Path(app.folder_var.get()) / "mudo.srt").exists()
+    assert "1 trabalho(s) sem fala guardada" in app.status_label.cget("text")
+
+
+def test_data_json_estragado_avisa_em_vez_de_sumir(app):
+    """A regra do laudo vale aqui: bloco que falha aparece, não some."""
+    _dados(app, "bom")
+    pasta = Path(app.folder_var.get())
+    (pasta / "quebrado.data.json").write_text("{isto não é json", encoding="utf-8")
+
+    app.page_subtitles.backfill()
+
+    assert (pasta / "bom.srt").exists(), "um arquivo ruim não pode parar os outros"
+    texto = app.status_label.cget("text")
+    assert "1 legenda(s) criada(s)" in texto
+    assert "não deu(deram) certo" in texto
+
+
+# ------------------------------------------------- o padrão novo da legenda --
+def test_a_legenda_srt_sai_por_padrao(app):
+    assert app.var_srt.get() is True
+    assert app._options_snapshot()["write_srt"] is True
+    assert app.var_vtt.get() is False, "o .vtt é para vídeo na web; continua opcional"
+
+
+def test_quem_ja_usava_recebe_a_legenda_ligada_uma_vez(app, tk_root):
+    """Restaurar "srt": false gravado pela versão antiga manteria o defeito."""
+    import tkinter
+
+    from lauda import desktop
+    from lauda.theme import load_value, save_value
+
+    save_value("job", {"srt": False, "vtt": False, "diarize": True})
+
+    janela = tkinter.Toplevel(tk_root)
+    janela.withdraw()
+    outra = desktop.LaudaApp(janela)
+    try:
+        assert outra.var_srt.get() is True, "a virada de padrão tem de chegar"
+        assert outra.var_diarize.get() is True, "o resto da escolha continua valendo"
+        outra._save_prefs()
+        assert load_value("job", {})["prefs_version"] == desktop.PREFS_VERSION
+    finally:
+        outra.shutdown()
+        janela.destroy()
+
+
+def test_depois_da_virada_desligar_a_legenda_continua_valendo(app, tk_root):
+    """A virada é uma vez só: quem desligar de propósito não é contrariado."""
+    import tkinter
+
+    from lauda import desktop
+    from lauda.theme import save_value
+
+    save_value("job", {"prefs_version": desktop.PREFS_VERSION, "srt": False})
+
+    janela = tkinter.Toplevel(tk_root)
+    janela.withdraw()
+    outra = desktop.LaudaApp(janela)
+    try:
+        assert outra.var_srt.get() is False
+    finally:
+        outra.shutdown()
+        janela.destroy()

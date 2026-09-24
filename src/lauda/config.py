@@ -98,7 +98,14 @@ class JobOptions:
     write_txt: bool = True
     write_transcript: bool = True
     write_json: bool = True
-    write_srt: bool = False
+    #: A legenda sai por padrão. Ela é o [BLOCO B] do laudo — os mesmos tempos,
+    #: o mesmo falante, o mesmo texto — só que num arquivo que o player entende.
+    #: Tudo de que precisa já está na memória quando se chega aqui, então
+    #: escrevê-la custa milissegundos e algumas dezenas de KB. Deixá-la
+    #: desligada por padrão só produzia a pergunta "cadê a legenda?".
+    write_srt: bool = True
+    #: O .vtt é o mesmo conteúdo noutro invólucro, para vídeo em página web.
+    #: Quem precisa dele sabe que precisa; por isso continua sendo escolha.
     write_vtt: bool = False
     #: Tamanho das legendas: "curta", "equilibrada" ou "longa" (ver cues.py).
     subtitle_density: str = DEFAULT_DENSITY

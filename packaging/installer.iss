@@ -8,7 +8,7 @@
 ; desinstalação sem confirmação: é dado dele, não do programa.
 
 #define AppName        "Lauda Local"
-#define AppVersion     "0.14.0-beta"
+#define AppVersion     "0.15.0-beta"
 #define AppPublisher   "Lauda Local"
 #define AppExe         "Lauda Local.exe"
 #define RaizProjeto    ".."

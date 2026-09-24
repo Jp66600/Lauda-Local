@@ -13,7 +13,8 @@ como pedir mudanças nela). Este aqui é o índice.
 ## 1. O que o programa é
 
 Python 3.12 puro, sem servidor e sem nuvem. Um arquivo de áudio ou vídeo entra;
-saem um laudo `.txt`, o texto corrido, um `.json` e, se pedido, legendas.
+saem um laudo `.txt`, o texto corrido, um `.json` e a legenda `.srt` — que é
+o `[BLOCO B]` do laudo noutro formato. O `.vtt` sai se for pedido.
 
 **Não é uma aplicação web.** A interface é uma janela nativa em Tkinter. Não há
 HTML, CSS, JavaScript, Electron nem React em lugar nenhum — quem chegar supondo
@@ -37,6 +38,7 @@ src/lauda/
   desktop.py      a janela nativa: layout, tema, eventos, resultado
   widgets.py      os widgets arredondados (o ttk nao arredonda nada)
   pages.py        Relatorio/Transcricao/Legendas: uma aba por arquivo
+                  (e o botao que refaz a legenda a partir do .data.json)
   theme.py        as duas paletas + o arquivo de preferencias ui.json
 
   pipeline.py     a orquestracao: e aqui que se le a ordem das etapas

@@ -191,7 +191,7 @@ def section_intro() -> list:
             "Detecta o idioma sozinho, ou usa o que você mandar.",
             "Marca o tempo de cada trecho e, opcionalmente, de cada palavra.",
             "Identifica quem fala (SPEAKER_00, SPEAKER_01...) quando você liga a diarização.",
-            "Gera legendas .srt e .vtt prontas para usar.",
+            "Gera a legenda .srt de todo trabalho, e o .vtt se você pedir.",
             "Escolhe sozinho GPU ou CPU e reduz o modelo se faltar memória.",
         ]),
         heading("O que ele não faz", "h2"),
@@ -249,7 +249,7 @@ def section_open() -> list:
         ),
         code(
             '.\\.venv\\Scripts\\lauda.exe run "C:\\videos\\entrevista.mp4" '
-            "-m small -l pt --diarize --srt -o .\\saida"
+            "-m small -l pt --diarize -o .\\saida"
         ),
         Spacer(1, 4 * mm),
         note(
@@ -388,9 +388,13 @@ def section_interface() -> list:
                  "Acrescenta ao laudo o Bloco C, com início, fim e confiança de cada "
                  "palavra.",
                  "Edição fina de legenda. Deixa o arquivo bem maior."],
-                ["Gerar legenda .srt / .vtt",
-                 "Gera arquivos de legenda prontos para player de vídeo.",
-                 "Quando for publicar ou legendar o vídeo."],
+                ["Gerar legenda .srt",
+                 "<b>Já vem ligado.</b> A legenda é o Bloco B do laudo noutro "
+                 "formato, e sai junto com ele.",
+                 "Deixe ligado. Desligar só economiza algumas dezenas de KB."],
+                ["Gerar legenda .vtt",
+                 "A mesma legenda no formato que o vídeo em página web usa.",
+                 "Quando for publicar o vídeo num site."],
                 ["Tamanho das legendas",
                  "<b>Curtas</b> (1 a 2 s), <b>Equilibrada</b> (5 a 8 s, o padrão) ou "
                  "<b>Blocos longos</b> (até 1 min). Vale para .srt e .vtt.",
@@ -431,6 +435,17 @@ def section_interface() -> list:
         ),
         Spacer(1, 2 * mm),
         para(
+            "Na página <b>Legendas</b> há um botão a mais: <b>Gerar as que "
+            "faltam</b>. Ele escreve a legenda dos trabalhos que você já "
+            "processou, lendo os trechos do arquivo .data.json de cada um — os "
+            "mesmos que o laudo imprime no Bloco B. Nada é transcrito de novo, e "
+            "leva menos de um segundo para uma pasta inteira. Serve para o que foi "
+            "processado antes de a legenda sair por padrão, e para trocar o tamanho "
+            "das legendas sem refazer o trabalho: apague a legenda antiga, escolha "
+            "o tamanho novo e clique. O que já existe nunca é sobrescrito."
+        ),
+        Spacer(1, 2 * mm),
+        para(
             "<b>Registro</b> é página separada, e mostra o que está acontecendo "
             "agora: cada etapa aparece na hora em que acontece. Os dois botões dela "
             "abrem a pasta dos logs e copiam o registro — é o que eu peço quando "
@@ -442,7 +457,7 @@ def section_interface() -> list:
             "<b>Registro</b> — o que está acontecendo agora, etapa por etapa.",
             "<b>Transcrição</b> — só o texto corrido, para ler ou copiar.",
             "<b>Legendas</b> — os arquivos .srt e .vtt, com os tempos como estão "
-            "no arquivo.",
+            "no arquivo, e o botão que cria as que faltam.",
             "<b>Arquivos</b> — em cima, a lista dos arquivos salvos e o resumo do "
             "processamento (tempo, velocidade, modelo, idioma, palavras, cobertura) com "
             "os avisos; embaixo, o <b>histórico</b> de todos os trabalhos já feitos.",
@@ -468,13 +483,6 @@ def section_interface() -> list:
             TEAL,
         ),
         Spacer(1, 2 * mm),
-        para(
-            "No pé da página Relatório ficam quatro botões: <b>Abrir a pasta</b> (no "
-            "explorador de arquivos), <b>Abrir o relatório</b> (no bloco de notas), "
-            "<b>Copiar o texto</b> (copia o conteúdo da página que estiver aberta) e, "
-            "à direita, <b>Ver o registro</b> — que alterna entre o laudo e o que "
-            "aconteceu durante o trabalho."
-        ),
         heading("Ollama: verificar e baixar pela janela", "h2"),
         para(
             "A página Configurações mostra se o servidor do Ollama está no ar e se o "
@@ -836,7 +844,8 @@ def section_cli() -> list:
                 ["--speaker-threshold", "0.30",
                  "Sensibilidade da separação de vozes no backend ecapa. Menor separa "
                  "mais; maior junta mais."],
-                ["--srt / --vtt", "desligado", "Gera as legendas."],
+                ["--srt / --no-srt", "<b>ligado</b>", "Gera a legenda .srt."],
+                ["--vtt", "desligado", "Gera também a legenda .vtt (vídeo na web)."],
                 ["--no-json", "-", "Não gera o arquivo de dados."],
                 ["--visual", "desligado", "Cortes de cena e miniaturas (só vídeo)."],
                 ["--summarize", "desligado", "Bloco de resumo via Ollama local."],

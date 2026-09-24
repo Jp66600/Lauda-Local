@@ -159,7 +159,7 @@ def build() -> Path:
     story += bullets([
         "<b>Entrevistas e reuniões</b> — texto com marcação de tempo e separação de "
         "quem fala, para citar e localizar no áudio.",
-        "<b>Vídeos para publicar</b> — legendas .srt e .vtt prontas.",
+        "<b>Vídeos para publicar</b> — a legenda .srt sai sozinha; o .vtt, se pedir.",
         "<b>Aulas e podcasts</b> — texto corrido para ler, buscar e resumir.",
         "<b>Arquivo e conferência</b> — dados técnicos e um código de integridade "
         "(SHA-256) que muda se o arquivo for alterado.",
@@ -237,7 +237,8 @@ def build() -> Path:
             ["entrevista.transcript.txt",
              "Só o texto corrido, em parágrafos — para copiar e colar."],
             ["entrevista.data.json", "Os mesmos dados em formato de programa."],
-            ["entrevista.srt / .vtt", "Legendas, se você marcou a opção."],
+            ["entrevista.srt", "A legenda, com os tempos de entrada e saída."],
+            ["entrevista.vtt", "A mesma legenda para vídeo na web, se marcada."],
         ],
         widths=[52 * mm, CONTENT_WIDTH - 52 * mm],
     ))
@@ -259,8 +260,9 @@ def build() -> Path:
              "O relatório passa a dizer SPEAKER_00, SPEAKER_01 e quanto tempo cada um falou."],
             ["Marcar o tempo das palavras",
              "você for editar legenda com precisão. Deixa o arquivo bem maior."],
-            ["Gerar legenda .srt / .vtt",
-             "você for subir o vídeo em algum lugar ou legendar no player."],
+            ["Gerar legenda .vtt",
+             "você for publicar o vídeo numa página web. A legenda .srt, que "
+             "serve para todo o resto, já vem ligada."],
             ["Extrair miniaturas",
              "quiser uma noção rápida do ritmo de edição do vídeo."],
             ["Integrar com Ollama",

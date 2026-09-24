@@ -2,6 +2,44 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.15.0-beta] — 2026-09-24
+
+### Corrigido
+
+- **"Abrir o local do arquivo" abria Documentos.** O `explorer` não lê os
+  argumentos pelo caminho normal: ele pega a linha de comando inteira e procura
+  o texto `/select,` logo depois do nome do programa. Mandando a lista
+  `["explorer", "/select,<caminho>"]`, o Python envolve o argumento todo em
+  aspas assim que o caminho tem espaço — a linha passa a começar com `"`, o
+  `/select,` deixa de estar onde o explorer procura, e ele abre a pasta padrão
+  dele. Só aparecia com espaço no caminho, que é o caso da pasta de saída
+  padrão, dentro de "Lauda Local". Agora as aspas vão por dentro:
+  `/select,"<caminho>"`.
+
+### Mudado
+
+- **A legenda `.srt` passou a sair por padrão.** Ela é o `[BLOCO B]` do laudo
+  noutro formato — os mesmos trechos, os mesmos tempos, o mesmo falante —, e
+  tudo de que precisa já está na memória quando o laudo é escrito: custa
+  milissegundos e algumas dezenas de KB. Deixá-la desligada por padrão só
+  produzia a pergunta "cadê a legenda?". O `.vtt`, que é o mesmo conteúdo para
+  vídeo em página web, continua sendo escolha.
+- Quem já usava recebe a virada **uma vez**: a preferência `srt: false` gravada
+  pela versão anterior é ignorada nesta abertura, e não nas seguintes. Sem
+  isso, um padrão novo nunca chega a quem já é usuário — que é justamente quem
+  sentiu falta da legenda.
+- Na página Legendas, o formato só entra no rótulo da aba **quando é preciso
+  para distinguir** (o mesmo trabalho com `.srt` e `.vtt`). Com um formato só,
+  o `(.srt)` era repetição comendo sete caracteres do nome do arquivo.
+
+### Adicionado
+
+- **"Gerar as que faltam"**, na página Legendas: escreve a legenda dos
+  trabalhos que já foram processados, lendo os trechos do `.data.json` de cada
+  um. Nada é transcrito de novo — nos oito trabalhos da máquina de teste, 2.291
+  legendas em 0,2 s. O que já existe não é sobrescrito; `.data.json` ilegível
+  ou trabalho sem fala guardada aparecem na contagem em vez de sumirem.
+
 ## [0.14.0-beta] — 2026-09-24
 
 ### Adicionado

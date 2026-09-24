@@ -111,7 +111,9 @@ def run_command(
         help="Distância de cosseno para separar falantes no backend ecapa "
         "(menor = mais falantes).",
     ),
-    srt: bool = typer.Option(False, "--srt", help="Também gerar legenda .srt."),
+    srt: bool = typer.Option(
+        True, "--srt/--no-srt", help="Gerar legenda .srt (padrão: sim)."
+    ),
     vtt: bool = typer.Option(False, "--vtt", help="Também gerar legenda .vtt."),
     densidade: str = typer.Option(
         DEFAULT_DENSITY, "--legenda-tamanho",

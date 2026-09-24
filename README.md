@@ -9,14 +9,15 @@
 
 Você aponta um arquivo; ele devolve um **laudo em `.txt`** com metadados
 técnicos, diagnóstico do áudio, idioma detectado e transcrição com marcação de
-tempo — mais um **`.json`** estruturado e, se quiser, legendas **`.srt`/`.vtt`**.
+tempo — mais a **legenda `.srt`**, um **`.json`** estruturado e, se quiser,
+também o `.vtt`.
 
 Nenhum byte do seu arquivo sai da máquina. Nenhuma API paga, nenhuma conta,
 nenhuma telemetria. Os modelos são baixados uma vez e reutilizados offline para
 sempre.
 
 ```bash
-lauda run entrevista.mp4 --diarize --srt -o saida
+lauda run entrevista.mp4 --diarize -o saida
 ```
 
 …ou abra a janela e arraste o arquivo para dentro:
@@ -42,16 +43,25 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 
 | Documento | Páginas | Para quem |
 |---|---|---|
-| [Guia rápido](docs/Lauda-Local-Guia-Rapido.pdf) | 3 | quem só quer transcrever um arquivo hoje |
+| [Guia rápido](docs/Lauda-Local-Guia-Rapido.pdf) | 4 | quem só quer transcrever um arquivo hoje |
 | [Manual completo](docs/Lauda-Local-Manual.pdf) | 19 | cada tela, cada opção e o que fazer quando dá errado |
 | [Decisões técnicas](docs/Lauda-Local-Decisoes-Tecnicas.pdf) | 16 | o porquê de cada escolha, as medições e os limites assumidos |
-| [Front-end](docs/Lauda-Local-Front-End.pdf) | 16 | como a interface foi construída e como pedir mudanças nela |
+| [Front-end](docs/Lauda-Local-Front-End.pdf) | 17 | como a interface foi construída e como pedir mudanças nela |
 
 ---
 
 ## O que há de novo
 
 A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
+
+**0.15.0-beta**
+- **A legenda `.srt` sai por padrão.** Ela é o `[BLOCO B]` do laudo noutro
+  formato, e tudo de que precisa já está pronto quando o laudo é escrito.
+- **"Gerar as que faltam"**, na página Legendas: escreve a legenda dos
+  trabalhos já processados a partir do `.data.json`, sem transcrever nada de
+  novo.
+- **"Abrir o local do arquivo" abria Documentos** quando o caminho tinha
+  espaço. Corrigido.
 
 **0.14.0-beta**
 - **Relatório e Legendas ganharam as mesmas abas da Transcrição**: uma por
@@ -115,7 +125,7 @@ sozinho.
 - Detecta o idioma (ou aceita o idioma forçado por você).
 - Gera timestamps por segmento — e por palavra, se você pedir.
 - Identifica quem fala (**diarização**), com backend que dispensa token do Hugging Face.
-- Escreve `report.txt`, `transcript.txt`, `data.json` e, se quiser, `.srt`/`.vtt`.
+- Escreve `report.txt`, `transcript.txt`, `data.json` e `.srt` — e o `.vtt`, se você pedir.
 - Escolhe sozinho device/modelo conforme sua GPU/RAM e **cai para CPU** se a GPU falhar.
 - Tem CLI e **aplicativo em janela própria**, com modo claro e escuro.
 - Deixa você **limitar quanto da máquina** ele pode usar (CPU, RAM, GPU, VRAM).
@@ -264,12 +274,20 @@ e a pasta de saída voltam como você deixou, em `~/.lauda/ui.json`. A página
 **Configurações** resume o que está guardado e tem o botão **Restaurar padrões**;
 o passo a passo mudou para a página **Ajuda**.
 
-**Enquanto processa, a página Relatório mostra o registro ao vivo** — arquivo,
-modelo, device e cada etapa, conforme acontecem. Ao terminar ela passa a mostrar
-o laudo, e o botão **Ver o registro** volta para o que aconteceu. Tudo também vai
-para `~/.lauda/logs/`; o processo que faz o trabalho pesado escreve num
-arquivo separado (`lauda-worker.log`), porque dois processos girando o mesmo
-arquivo rotativo dá erro no Windows.
+**Enquanto processa, a janela abre a página Registro** — arquivo, modelo, device
+e cada etapa, conforme acontecem. Ao terminar ela pula para a Relatório, com a
+aba do arquivo novo já selecionada. Tudo também vai para `~/.lauda/logs/`; o
+processo que faz o trabalho pesado escreve num arquivo separado
+(`lauda-worker.log`), porque dois processos girando o mesmo arquivo rotativo dá
+erro no Windows.
+
+**Relatório, Transcrição e Legendas são a mesma página com outro sufixo**: uma
+aba por arquivo da pasta de saída, com o nome do arquivo de origem, e embaixo
+os botões de abrir o local do arquivo, copiar o texto e abrir o laudo daquele
+trabalho. A fonte é sempre a pasta — o que você já tinha lá de outros dias
+aparece igual. Na página Legendas, **"Gerar as que faltam"** escreve a legenda
+dos trabalhos já processados lendo os trechos do `.data.json` de cada um: é o
+mesmo `[BLOCO B]` do laudo noutro formato, então nada é transcrito de novo.
 
 **Tempo restante**: depois de 8% do trabalho o app passa a dizer quanto falta,
 pelo ritmo medido — antes disso a conta seria dominada pelo carregamento do
@@ -326,10 +344,10 @@ python scripts/make_test_media.py
 lauda run tests/_media/tone.wav --model tiny --output ./saida
 ```
 
-**4. Um caso real, com legendas e timestamps por palavra:**
+**4. Um caso real, com as duas legendas e timestamps por palavra:**
 
 ```bash
-lauda run "C:\videos\entrevista.mp4" -m small -l pt --srt --vtt --words -o .\saida
+lauda run "C:\videos\entrevista.mp4" -m small -l pt --vtt --words -o .\saida
 ```
 
 Saída em `./saida`:
@@ -338,7 +356,8 @@ Saída em `./saida`:
 entrevista.report.txt      laudo completo (o produto principal)
 entrevista.transcript.txt  só o texto corrido
 entrevista.data.json       estrutura machine-readable
-entrevista.srt / .vtt      legendas (se pedidas)
+entrevista.srt             a legenda (sai por padrão)
+entrevista.vtt             a mesma legenda para vídeo na web (se pedida)
 ```
 
 ---
@@ -364,7 +383,8 @@ lauda run <arquivo> [opções]
 | `--num-speakers` | — | Número exato de falantes, se você souber |
 | `--min-speakers`, `--max-speakers` | — | Faixa esperada de falantes |
 | `--speaker-threshold` | `0.30` | Distância de cosseno no backend `ecapa` |
-| `--srt`, `--vtt` | desligado | Também gerar legendas |
+| `--srt` / `--no-srt` | **ligado** | Gerar a legenda `.srt` |
+| `--vtt` | desligado | Gerar também a legenda `.vtt` (vídeo na web) |
 | `--legenda-tamanho` | `equilibrada` | Tamanho das legendas: `curta` (1–2 s), `equilibrada` (5–8 s) ou `longa` (blocos de até 1 min) |
 | `--no-json` | — | Não gerar o `.data.json` |
 | `--visual` | desligado | Cortes de cena + thumbnails (só vídeo) |
@@ -588,7 +608,7 @@ pip install -r requirements-diarize.txt
 Depois basta ligar a flag:
 
 ```bash
-lauda run entrevista.mp4 -m small -l pt --diarize --srt
+lauda run entrevista.mp4 -m small -l pt --diarize
 ```
 
 O relatório passa a trazer `SPEAKER_00`, `SPEAKER_01`… nos segmentos, o tempo

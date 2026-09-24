@@ -1,11 +1,11 @@
-LAUDA LOCAL — versão de teste 0.14.0-beta
+LAUDA LOCAL — versão de teste 0.15.0-beta
 =========================================
 
 O que é
 -------
 Transforma qualquer áudio ou vídeo num relatório de texto: metadados do
-arquivo, qualidade do áudio, idioma, transcrição com marcação de tempo e, se
-você quiser, quem falou o quê e legendas .srt/.vtt.
+arquivo, qualidade do áudio, idioma, transcrição com marcação de tempo e a
+legenda .srt — e, se você quiser, quem falou o quê e também o .vtt.
 
 Tudo acontece no seu computador. Nenhum byte do seu arquivo é enviado para
 lugar nenhum, e não há nenhuma conta ou API paga envolvida.
@@ -20,11 +20,18 @@ Como usar
 1. Abra o programa e vá em "Novo trabalho".
 2. Arraste o áudio ou vídeo para a área pontilhada (ou clique nela).
 3. Confira a pasta de saída, no canto de baixo do painel da direita.
-4. Ligue o que quiser: identificar quem fala, legendas, tempo por palavra.
+4. Ligue o que quiser: identificar quem fala, tempo por palavra, .vtt.
+   (a legenda .srt já vem ligada)
 5. Clique em Processar e acompanhe a trilha de etapas no rodapé.
 
 O relatório aparece na página "Relatório" e os arquivos ficam salvos na pasta
-que você escolheu.
+que você escolheu. As páginas "Relatório", "Transcrição" e "Legendas" mostram
+uma aba por arquivo da pasta de saída — inclusive o que você processou noutro
+dia.
+
+Se você já tinha trabalhos processados antes desta versão, eles não têm
+legenda. O botão "Gerar as que faltam", na página "Legendas", cria a legenda
+deles a partir do arquivo .data.json de cada um, sem transcrever nada de novo.
 
 
 Vários arquivos de uma vez
