@@ -2,6 +2,28 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.14.0-beta] — 2026-09-24
+
+### Adicionado
+
+- **Página Legendas**, com uma aba por arquivo `.srt` e `.vtt` da pasta de
+  saída — os tempos de entrada e saída exatamente como estão no arquivo.
+- **Página Registro**, separada da Relatório. Antes o registro ao vivo era um
+  modo escondido dela, com um botão alternando as duas coisas no mesmo lugar;
+  achar o laudo enquanto o trabalho rodava virava caça ao tesouro. A página tem
+  botões para abrir a pasta dos logs e copiar o registro — que é o que se pede
+  quando alguém relata um problema.
+
+### Mudado
+
+- **Relatório ganhou as mesmas abas da Transcrição**: uma por arquivo
+  processado, com o nome do arquivo de origem, Atualizar, e os três botões
+  embaixo. Na página do laudo, o terceiro botão abre o próprio arquivo.
+- As três páginas de arquivo (Relatório, Transcrição, Legendas) passaram a ser
+  **o mesmo componente** (`pages.py`) com outro sufixo. Eram três cópias em
+  potencial — e três cópias garantem que uma correção seja aplicada em duas.
+- A barra lateral tem nove páginas.
+
 ## [0.13.1-beta] — 2026-09-24
 
 ### Corrigido

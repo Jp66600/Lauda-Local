@@ -283,21 +283,25 @@ def section_interface() -> list:
     return [
         heading("3. A janela, campo a campo"),
         para(
-            "A janela tem uma <b>barra lateral</b> com sete páginas. A primeira, "
+            "A janela tem uma <b>barra lateral</b> com nove páginas. A primeira, "
             "<b>Novo trabalho</b>, é onde tudo acontece; as outras mostram o resultado "
             "e as preferências. Nada é enviado para lugar nenhum ao clicar em "
             "Processar — todo o trabalho acontece na sua máquina."
         ),
-        heading("As sete páginas da barra lateral", "h2"),
+        heading("As nove páginas da barra lateral", "h2"),
         grid(
             ["Página", "Para que serve"],
             [
                 ["Novo trabalho",
                  "Escolher o arquivo, ligar os recursos e processar."],
                 ["Relatório",
-                 "A pré-visualização do laudo, com os botões de abrir e copiar."],
+                 "O laudo completo, com uma aba por arquivo processado."],
+                ["Registro",
+                 "O que o programa está fazendo agora, linha a linha."],
                 ["Transcrição",
                  "O texto corrido, com uma aba por arquivo transcrito."],
+                ["Legendas",
+                 "As legendas geradas, com os tempos de entrada e saída."],
                 ["Arquivos",
                  "O que foi gerado agora e o histórico de todos os trabalhos."],
                 ["Desempenho", "Quanto da máquina o aplicativo pode usar."],
@@ -408,21 +412,37 @@ def section_interface() -> list:
             strong_columns=(0,),
         ),
         heading("As páginas de resultado", "h2"),
+        para(
+            "<b>Relatório</b>, <b>Transcrição</b> e <b>Legendas</b> são a mesma "
+            "página com outro arquivo: uma faixa de abas no alto, uma para cada "
+            "arquivo daquele tipo <b>que existe na pasta de saída</b> — inclusive "
+            "os de outro dia. Clicar na aba troca o conteúdo; acima dele ficam o "
+            "nome do arquivo de origem, a duração, o modelo e o caminho completo. "
+            "A lista se atualiza ao abrir a página e ao terminar um trabalho, e o "
+            "botão <b>Atualizar</b> serve para quando você mexer na pasta por fora."
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "Embaixo do texto, os mesmos três botões em todas: <b>Abrir o local do "
+            "arquivo</b> (a pasta abre com o arquivo já selecionado, pronto para "
+            "copiar), <b>Copiar o texto</b> e um terceiro que abre o laudo daquele "
+            "trabalho — na própria página Relatório, ele abre o laudo que está na "
+            "tela."
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "<b>Registro</b> é página separada, e mostra o que está acontecendo "
+            "agora: cada etapa aparece na hora em que acontece. Os dois botões dela "
+            "abrem a pasta dos logs e copiam o registro — é o que eu peço quando "
+            "alguém relata um problema."
+        ),
+        Spacer(1, 3 * mm),
         *bullets([
-            "<b>Relatório</b> — durante o trabalho mostra o <b>registro ao vivo</b>: "
-            "arquivo, modelo, device e cada etapa, conforme acontecem. Quando termina, "
-            "passa a mostrar o laudo completo, já formatado.",
-            "<b>Transcrição</b> — o texto corrido, com <b>uma aba para cada "
-            "transcrição que existe na pasta de saída</b> — inclusive as de outro "
-            "dia, feitas antes. Trocou a pasta, trocam as abas. A lista se atualiza "
-            "quando você abre a página e quando um trabalho termina; o botão "
-            "<b>Atualizar</b>, ao lado das abas, serve para quando você mexer na "
-            "pasta por fora. Embaixo do texto, três botões: "
-            "<b>Abrir o local do arquivo</b> (a pasta de saída abre com o .txt já "
-            "selecionado, pronto para copiar), <b>Copiar o texto</b> e <b>Abrir o "
-            "laudo deste arquivo</b>. Acima do texto, o nome do arquivo, a duração, "
-            "o modelo usado e o caminho completo — para você não precisar caçar nada "
-            "na pasta.",
+            "<b>Relatório</b> — o laudo completo de cada arquivo processado.",
+            "<b>Registro</b> — o que está acontecendo agora, etapa por etapa.",
+            "<b>Transcrição</b> — só o texto corrido, para ler ou copiar.",
+            "<b>Legendas</b> — os arquivos .srt e .vtt, com os tempos como estão "
+            "no arquivo.",
             "<b>Arquivos</b> — em cima, a lista dos arquivos salvos e o resumo do "
             "processamento (tempo, velocidade, modelo, idioma, palavras, cobertura) com "
             "os avisos; embaixo, o <b>histórico</b> de todos os trabalhos já feitos.",

@@ -87,8 +87,8 @@ def test_janela_abre_com_o_passo_a_passo(app):
     ajuda = app.text_help.get("1.0", "end-1c")
     assert "COMO USAR" in ajuda
     assert "1." in ajuda and "4." in ajuda
-    # Os botões de resultado só liberam depois de processar.
-    assert str(app.button_open["state"]) == "disabled"
+    # Os botões de cada página só liberam quando há arquivo para mostrar.
+    assert str(app.page_report.button_folder["state"]) == "disabled"
 
 
 def test_pasta_de_saida_ja_vem_preenchida(app, tmp_path: Path):
@@ -124,7 +124,7 @@ def test_processa_e_mostra_a_previa_na_janela(app, silent_video: Path, tmp_path:
 
     assert app.result is not None, "o resultado não chegou à interface"
 
-    previa = app.text_report.get("1.0", "end-1c")
+    previa = app.page_report.text.get("1.0", "end-1c")
     assert "LAUDA LOCAL" in previa, "o relatório não foi carregado na prévia"
     assert "1. IDENTIDADE DO ARQUIVO" in previa
     assert silent_video.name in previa
@@ -137,7 +137,8 @@ def test_processa_e_mostra_a_previa_na_janela(app, silent_video: Path, tmp_path:
     gerado = tmp_path / f"{silent_video.stem}.report.txt"
     assert gerado.exists()
 
-    for button in (app.button_folder, app.button_open, app.button_copy):
+    for button in (app.page_report.button_folder, app.page_report.button_copy,
+                   app.page_report.button_third):
         assert str(button["state"]) == "normal", "botões de resultado continuaram travados"
 
     assert app.progress["value"] == 100
@@ -180,14 +181,14 @@ def test_o_modo_escuro_repinta_a_previa(app):
     from lauda.theme import DARK, LIGHT
 
     app.set_theme("claro")
-    claro = app.text_report.cget("background")
+    claro = app.page_report.text.cget("background")
 
     app.set_theme("escuro")
-    escuro = app.text_report.cget("background")
+    escuro = app.page_report.text.cget("background")
 
     assert claro.lower() == LIGHT.preview_bg.lower()
     assert escuro.lower() == DARK.preview_bg.lower()
-    assert app.text_report.cget("foreground").lower() == DARK.preview_fg.lower()
+    assert app.page_report.text.cget("foreground").lower() == DARK.preview_fg.lower()
     # Todas as abas, não só a que estava visível.
     for widget in app._texts:
         assert widget.cget("background").lower() == DARK.preview_bg.lower()
@@ -209,10 +210,10 @@ def test_tema_invalido_e_recusado(app):
 def test_troca_de_tema_nao_apaga_o_relatorio(app, silent_video: Path):
     """Repintar não pode limpar o que já está na tela."""
     conteudo = "== RELATORIO DE TESTE =="
-    app._set_text(app.text_report, conteudo)
+    app._set_text(app.page_report.text, conteudo)
     app.set_theme("escuro")
-    assert app.text_report.get("1.0", "end-1c") == conteudo
-    assert str(app.text_report["state"]) == "disabled", "a prévia continua só de leitura"
+    assert app.page_report.text.get("1.0", "end-1c") == conteudo
+    assert str(app.page_report.text["state"]) == "disabled", "a prévia continua só de leitura"
 
 
 # --------------------------------------------------------------------------- #
@@ -857,25 +858,23 @@ def test_restaurar_padroes_desliga_tudo(app):
 
 
 # --------------------------------------------------------------------------- #
-# Registro ao vivo na página Relatório (BACKLOG-017)
+# Registro ao vivo, na página Registro
 # --------------------------------------------------------------------------- #
 def test_o_log_do_app_chega_a_tela(app):
-    """Sem esperar o fim: o que o app registra aparece na página Relatório."""
+    """Sem esperar o fim: o que o app registra aparece na página Registro."""
     import logging
 
-    app._show_report_view("log")
     logging.getLogger("lauda.teste").info("carregando o modelo")
     _drenar(app)
 
     assert any("carregando o modelo" in linha for linha in app._log_lines)
-    assert "carregando o modelo" in app.text_report.get("1.0", "end")
+    assert "carregando o modelo" in app.text_log.get("1.0", "end")
 
 
 def test_cada_etapa_vira_uma_linha_so(app):
     """O ASR reporta a cada segmento; o registro não pode repetir a etapa."""
     from lauda.desktop import Progress
 
-    app._show_report_view("log")
     for fracao in (0.30, 0.45, 0.60):
         app._on_progress(Progress(stage="asr", fraction=fracao, message=""))
     _drenar(app)
@@ -894,16 +893,15 @@ def test_o_registro_nao_cresce_sem_limite(app):
     assert app._log_lines[-1] == f"linha {LOG_VIEW_LINES + 119}", "guarda as mais novas"
 
 
-def test_alternar_entre_registro_e_relatorio(app):
+def test_registro_e_relatorio_sao_paginas_separadas(app):
+    """Antes eram a mesma página com um botão alternando; achar o laudo durante
+    o trabalho virava caça ao tesouro."""
     app._append_log("uma linha do registro")
-    app._show_report_view("log")
-    assert "uma linha do registro" in app.text_report.get("1.0", "end")
-    assert app.button_view.cget("text") == "Ver o relatório"
+    _drenar(app)
 
-    app.toggle_report_view()
-    assert app._report_view == "report"
-    assert app.button_view.cget("text") == "Ver o registro"
-    assert "uma linha do registro" not in app.text_report.get("1.0", "end")
+    assert "uma linha do registro" in app.text_log.get("1.0", "end")
+    assert "uma linha do registro" not in app.page_report.text.get("1.0", "end")
+    assert app.tab_log is not app.page_report.card
 
 
 def test_o_fim_do_trabalho_volta_para_o_laudo(app, silent_video: Path, tmp_path: Path):
@@ -913,8 +911,8 @@ def test_o_fim_do_trabalho_volta_para_o_laudo(app, silent_video: Path, tmp_path:
     _pump(app, seconds=90.0)
 
     assert app.result is not None, "o trabalho precisa terminar para este teste valer"
-    assert app._report_view == "report", "ao terminar, a página mostra o laudo"
-    assert "RELATÓRIO DE MÍDIA" in app.text_report.get("1.0", "end")
+    assert app.nav.select() == str(app.page_report.card), "ao terminar, o laudo na frente"
+    assert "RELATÓRIO DE MÍDIA" in app.page_report.text.get("1.0", "end")
     assert app._log_lines, "e o registro do que aconteceu continua guardado"
 
 
@@ -1662,11 +1660,11 @@ def test_pasta_sem_transcricao_convida_e_trava_os_botoes(app, tmp_path: Path):
     vazia = tmp_path / "vazia"
     vazia.mkdir()
     app.folder_var.set(str(vazia))
-    app._refresh_transcript_tabs()
+    app.page_transcript.rebuild()
 
-    assert "aparece aqui depois de processar" in app.text_plain.get("1.0", "end-1c")
-    assert app.transcript_buttons == {}
-    assert str(app.button_transcript_folder["state"]) == "disabled"
+    assert "aparece aqui depois de processar" in app.page_transcript.text.get("1.0", "end-1c")
+    assert app.page_transcript.buttons == {}
+    assert str(app.page_transcript.button_folder["state"]) == "disabled"
 
 
 def test_cada_arquivo_transcrito_vira_uma_aba(app, tmp_path: Path):
@@ -1674,8 +1672,8 @@ def test_cada_arquivo_transcrito_vira_uma_aba(app, tmp_path: Path):
     _trabalho(app, tmp_path, "reuniao.mp4", "texto da reuniao")
     _trabalho(app, tmp_path, "aula.mp3", "texto da aula")
 
-    assert len(app.transcript_buttons) == 3
-    rotulos = [b._text for b in app.transcript_buttons.values()]
+    assert len(app.page_transcript.buttons) == 3
+    rotulos = [b._text for b in app.page_transcript.buttons.values()]
     assert rotulos == ["aula.mp3", "reuniao.mp4", "entrevista.mp4"], "do mais novo ao mais velho"
 
 
@@ -1683,9 +1681,9 @@ def test_o_recem_terminado_fica_selecionado(app, tmp_path: Path):
     _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
     caminho = _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
 
-    assert app._transcript_current == str(caminho)
-    assert "texto do segundo" in app.text_plain.get("1.0", "end-1c")
-    selecionadas = [b._text for b in app.transcript_buttons.values() if b._selected]
+    assert app.page_transcript.current == str(caminho)
+    assert "texto do segundo" in app.page_transcript.text.get("1.0", "end-1c")
+    selecionadas = [b._text for b in app.page_transcript.buttons.values() if b._selected]
     assert selecionadas == ["segundo.mp4"]
 
 
@@ -1693,32 +1691,33 @@ def test_clicar_na_aba_troca_o_texto(app, tmp_path: Path):
     primeiro = _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
     _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
 
-    app.show_transcript(str(primeiro))
+    app.page_transcript.show(str(primeiro))
 
-    assert "texto do primeiro" in app.text_plain.get("1.0", "end-1c")
-    assert app._transcript_current == str(primeiro)
-    selecionadas = [b._text for b in app.transcript_buttons.values() if b._selected]
+    assert "texto do primeiro" in app.page_transcript.text.get("1.0", "end-1c")
+    assert app.page_transcript.current == str(primeiro)
+    selecionadas = [b._text for b in app.page_transcript.buttons.values() if b._selected]
     assert selecionadas == ["primeiro.mp4"]
 
 
 def test_a_aba_diz_o_nome_do_arquivo_e_onde_ele_esta(app, tmp_path: Path):
     caminho = _trabalho(app, tmp_path, "entrevista_do_diretor.mp4", "texto")
 
-    legenda = app.transcript_label.cget("text")
+    legenda = app.page_transcript.label.cget("text")
     assert "entrevista_do_diretor.mp4" in legenda
     assert str(caminho) in legenda, "o caminho completo evita ter de caçar na pasta"
 
 
 def test_nenhuma_transcricao_fica_escondida(app, tmp_path: Path):
     """A pasta pode ter dezenas; todas viram aba, e a área rola."""
-    from lauda.desktop import TAB_MAX_ROWS, TAB_ROW_HEIGHT
+    from lauda.pages import MAX_ROWS as TAB_MAX_ROWS
+    from lauda.pages import ROW_HEIGHT as TAB_ROW_HEIGHT
 
     for indice in range(11):
         _trabalho(app, tmp_path, f"arquivo{indice}.mp4", f"texto {indice}")
 
-    assert len(app.transcript_buttons) == 11
+    assert len(app.page_transcript.buttons) == 11
     app.root.update_idletasks()
-    altura = int(app.transcript_canvas.cget("height"))
+    altura = int(app.page_transcript.canvas.cget("height"))
     assert altura <= TAB_ROW_HEIGHT * TAB_MAX_ROWS, "a área não cresce sem limite"
 
 
@@ -1729,12 +1728,12 @@ def test_transcricao_que_ja_estava_na_pasta_vira_aba(app, tmp_path: Path):
     for nome in ("Reuniao-11-09-26-Ditel", "Gravacao_de_Tela_2026-09-11"):
         (saida / f"{nome}.transcript.txt").write_text(f"texto de {nome}", encoding="utf-8")
 
-    app._refresh_transcript_tabs()
+    app.page_transcript.rebuild()
 
-    rotulos = sorted(b._text for b in app.transcript_buttons.values())
+    rotulos = sorted(b._text for b in app.page_transcript.buttons.values())
     assert len(rotulos) == 2
     assert any("Ditel" in r for r in rotulos), "o nome sai do próprio arquivo"
-    assert "texto de " in app.text_plain.get("1.0", "end-1c")
+    assert "texto de " in app.page_transcript.text.get("1.0", "end-1c")
 
 
 def test_trocar_a_pasta_de_saida_troca_as_abas(app, tmp_path: Path):
@@ -1744,10 +1743,10 @@ def test_trocar_a_pasta_de_saida_troca_as_abas(app, tmp_path: Path):
     (outra / "novo.transcript.txt").write_text("texto novo", encoding="utf-8")
 
     app.folder_var.set(str(outra))
-    app._refresh_transcript_tabs()
+    app.page_transcript.rebuild()
 
-    assert [b._text for b in app.transcript_buttons.values()] == ["novo"]
-    assert "texto novo" in app.text_plain.get("1.0", "end-1c")
+    assert [b._text for b in app.page_transcript.buttons.values()] == ["novo"]
+    assert "texto novo" in app.page_transcript.text.get("1.0", "end-1c")
 
 
 def test_transcricao_apagada_do_disco_perde_a_aba(app, tmp_path: Path):
@@ -1756,9 +1755,9 @@ def test_transcricao_apagada_do_disco_perde_a_aba(app, tmp_path: Path):
     _trabalho(app, tmp_path, "presente.mp4", "texto")
     sumido.unlink()
 
-    app._refresh_transcript_tabs()
+    app.page_transcript.rebuild()
 
-    assert [b._text for b in app.transcript_buttons.values()] == ["presente.mp4"]
+    assert [b._text for b in app.page_transcript.buttons.values()] == ["presente.mp4"]
 
 
 def test_o_botao_abre_a_pasta_com_o_arquivo_selecionado(app, tmp_path: Path, monkeypatch):
@@ -1766,7 +1765,7 @@ def test_o_botao_abre_a_pasta_com_o_arquivo_selecionado(app, tmp_path: Path, mon
     revelados = []
     monkeypatch.setattr(app, "_reveal_in_folder", revelados.append)
 
-    app.open_transcript_folder()
+    app.page_transcript.open_folder()
 
     assert revelados == [Path(str(caminho))]
 
@@ -1788,7 +1787,7 @@ def test_copiar_leva_a_transcricao_mostrada(app, tmp_path: Path):
     _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
     _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
 
-    app.copy_transcript()
+    app.page_transcript.copy()
 
     assert "texto do segundo" in app.root.clipboard_get()
 
@@ -1891,13 +1890,13 @@ def test_transcricao_nova_na_pasta_aparece_ao_atualizar(app, tmp_path: Path):
     saida = Path(app.folder_var.get())
     (saida / "chegou_depois.transcript.txt").write_text("texto novo", encoding="utf-8")
 
-    assert len(app.transcript_buttons) == 1, "a tela ainda não sabe"
+    assert len(app.page_transcript.buttons) == 1, "a tela ainda não sabe"
 
-    app.refresh_transcripts()
+    app.page_transcript.refresh()
 
-    assert len(app.transcript_buttons) == 2
-    assert "Transcrições atualizadas" in app.status_label.cget("text")
-    assert "1 transcrição(ões) nova(s)" in app.status_label.cget("text")
+    assert len(app.page_transcript.buttons) == 2
+    assert "Transcrição:" in app.status_label.cget("text")
+    assert "1 arquivo(s) novo(s)" in app.status_label.cget("text")
 
 
 def test_transcricao_apagada_some_ao_atualizar(app, tmp_path: Path):
@@ -1905,9 +1904,9 @@ def test_transcricao_apagada_some_ao_atualizar(app, tmp_path: Path):
     _trabalho(app, tmp_path, "fica.mp4", "texto")
     caminho.unlink()
 
-    app.refresh_transcripts()
+    app.page_transcript.refresh()
 
-    assert [b._text for b in app.transcript_buttons.values()] == ["fica.mp4"]
+    assert [b._text for b in app.page_transcript.buttons.values()] == ["fica.mp4"]
     assert "sumiu(ram) da pasta" in app.status_label.cget("text")
 
 
@@ -1915,19 +1914,19 @@ def test_atualizar_mantem_a_aba_aberta(app, tmp_path: Path):
     """Quem clica em Atualizar quer ver o que mudou, não perder o lugar."""
     primeiro = _trabalho(app, tmp_path, "primeiro.mp4", "texto do primeiro")
     _trabalho(app, tmp_path, "segundo.mp4", "texto do segundo")
-    app.show_transcript(str(primeiro))
+    app.page_transcript.show(str(primeiro))
 
-    app.refresh_transcripts()
+    app.page_transcript.refresh()
 
-    assert app._transcript_current == str(primeiro)
-    assert "texto do primeiro" in app.text_plain.get("1.0", "end-1c")
+    assert app.page_transcript.current == str(primeiro)
+    assert "texto do primeiro" in app.page_transcript.text.get("1.0", "end-1c")
 
 
 def test_sem_novidade_o_status_nao_e_poluido(app, tmp_path: Path):
     _trabalho(app, tmp_path, "unico.mp4", "texto")
     app.status_label.configure(text="mensagem anterior")
 
-    app.refresh_transcripts()
+    app.page_transcript.refresh()
 
     assert app.status_label.cget("text") == "mensagem anterior"
 
@@ -1938,9 +1937,9 @@ def test_abrir_a_pagina_transcricao_atualiza(app, tmp_path: Path):
     (saida / "apareceu.transcript.txt").write_text("novo", encoding="utf-8")
 
     app.nav.select(app.tab_job)          # sai da página
-    app.nav.select(app.tab_plain)        # e volta para ela
+    app.nav.select(app.page_transcript.card)        # e volta para ela
 
-    assert len(app.transcript_buttons) == 2, "abrir a página relê a pasta"
+    assert len(app.page_transcript.buttons) == 2, "abrir a página relê a pasta"
 
 
 def test_a_area_das_abas_nao_sobra_espaco(app, tmp_path: Path):
@@ -1950,20 +1949,21 @@ def test_a_area_das_abas_nao_sobra_espaco(app, tmp_path: Path):
         _trabalho(app, tmp_path, f"arquivo{indice}.mp4", "texto")
     app.root.update_idletasks()
 
-    pedido = app.transcript_tabs.winfo_reqheight()
-    assert int(app.transcript_canvas.cget("height")) == pedido, "nada de vão"
-    assert app.transcript_scroll.winfo_manager() == "", "cabe tudo: a barra sai da frente"
+    pedido = app.page_transcript.strip.winfo_reqheight()
+    assert int(app.page_transcript.canvas.cget("height")) == pedido, "nada de vão"
+    assert app.page_transcript.scroll.winfo_manager() == "", "cabe tudo: a barra sai da frente"
 
 
 def test_com_abas_demais_a_barra_aparece_e_a_altura_para_no_teto(app, tmp_path: Path):
-    from lauda.desktop import TAB_MAX_ROWS, TAB_ROW_HEIGHT
+    from lauda.pages import MAX_ROWS as TAB_MAX_ROWS
+    from lauda.pages import ROW_HEIGHT as TAB_ROW_HEIGHT
 
     for indice in range(14):
         _trabalho(app, tmp_path, f"arquivo{indice}.mp4", "texto")
     app.root.update_idletasks()
 
-    assert int(app.transcript_canvas.cget("height")) == TAB_ROW_HEIGHT * TAB_MAX_ROWS
-    assert app.transcript_scroll.winfo_manager() == "grid", "agora ela serve para algo"
+    assert int(app.page_transcript.canvas.cget("height")) == TAB_ROW_HEIGHT * TAB_MAX_ROWS
+    assert app.page_transcript.scroll.winfo_manager() == "grid", "agora ela serve para algo"
 
 
 def test_a_barra_de_rolagem_nao_pede_altura_de_canvas(app):
@@ -1978,3 +1978,132 @@ def test_a_barra_de_rolagem_nao_pede_altura_de_canvas(app):
     assert vertical.winfo_reqwidth() > 1, "a espessura continua fixa"
     vertical.destroy()
     horizontal.destroy()
+
+
+# ------------------------------------------ Relatório, Registro, Legendas --
+def _saida(app, nome: str, sufixo: str, texto: str) -> Path:
+    pasta = Path(app.folder_var.get())
+    pasta.mkdir(parents=True, exist_ok=True)
+    arquivo = pasta / f"{nome}{sufixo}"
+    arquivo.write_text(texto, encoding="utf-8")
+    return arquivo
+
+
+def test_as_tres_paginas_de_arquivo_existem(app):
+    titulos = [p.spec.title for p in app.file_pages]
+    assert titulos == ["Relatório", "Transcrição", "Legendas"]
+
+
+def test_a_barra_lateral_tem_registro_e_legendas(app):
+    nomes = [item._text for item, _ in app.nav._items]
+    assert nomes == [
+        "Novo trabalho", "Relatório", "Registro", "Transcrição", "Legendas",
+        "Arquivos", "Desempenho", "Ajuda", "Configurações",
+    ]
+
+
+def test_cada_pagina_so_enxerga_os_arquivos_dela(app, tmp_path: Path):
+    _saida(app, "reuniao", ".report.txt", "LAUDA LOCAL — RELATÓRIO")
+    _saida(app, "reuniao", ".transcript.txt", "texto corrido")
+    _saida(app, "reuniao", ".srt", "1\n00:00:00,000 --> 00:00:02,000\nfala\n")
+
+    for pagina in app.file_pages:
+        pagina.rebuild()
+
+    assert len(app.page_report.buttons) == 1
+    assert len(app.page_transcript.buttons) == 1
+    assert len(app.page_subtitles.buttons) == 1
+    assert "RELATÓRIO" in app.page_report.text.get("1.0", "end-1c")
+    assert "texto corrido" in app.page_transcript.text.get("1.0", "end-1c")
+    assert "00:00:00,000 -->" in app.page_subtitles.text.get("1.0", "end-1c")
+
+
+def test_legenda_mostra_srt_e_vtt_do_mesmo_trabalho(app, tmp_path: Path):
+    _saida(app, "aula", ".srt", "1\n00:00:01,000 --> 00:00:02,000\nolá\n")
+    _saida(app, "aula", ".vtt", "WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\nolá\n")
+
+    app.page_subtitles.rebuild()
+
+    rotulos = sorted(b._text for b in app.page_subtitles.buttons.values())
+    assert len(rotulos) == 2
+    assert any(".srt" in r for r in rotulos) and any(".vtt" in r for r in rotulos)
+
+
+def test_a_legenda_mantem_os_tempos_como_no_arquivo(app, tmp_path: Path):
+    conteudo = "1\n00:00:03,120 --> 00:00:05,900\n[SPEAKER_00] Boa noite.\n"
+    _saida(app, "entrevista", ".srt", conteudo)
+
+    app.page_subtitles.rebuild()
+
+    assert app.page_subtitles.text.get("1.0", "end-1c").strip() == conteudo.strip()
+
+
+def test_o_nome_do_trabalho_vem_do_historico(app, tmp_path: Path):
+    from lauda import history
+
+    laudo = _saida(app, "2026-09-23_13-48-07", ".report.txt", "laudo")
+    history.record(history.HistoryEntry(
+        file_name="2026-09-23 13-48-07.mp4", report_path=str(laudo),
+        duration=3600.0, model="large-v3",
+    ))
+
+    app.page_report.rebuild()
+
+    assert any("13-48-07.mp4" in b._text for b in app.page_report.buttons.values())
+    legenda = app.page_report.label.cget("text")
+    assert "1:00:00" in legenda and "large-v3" in legenda
+
+
+def test_o_registro_tem_pagina_e_botoes_proprios(app):
+    app._append_log("primeira linha")
+    _drenar(app)
+
+    assert "primeira linha" in app.text_log.get("1.0", "end-1c")
+    assert str(app.button_log_copy["state"]) == "normal"
+
+
+def test_copiar_o_registro(app):
+    app._append_log("linha do registro")
+    _drenar(app)
+
+    app.copy_log()
+
+    assert "linha do registro" in app.root.clipboard_get()
+
+
+def test_abrir_a_pasta_dos_logs(app, tmp_path: Path, monkeypatch):
+    """É a pasta que eu peço quando alguém relata um problema."""
+    from lauda import desktop
+
+    pasta = tmp_path / "logs"
+    pasta.mkdir()
+    monkeypatch.setattr(desktop, "LOG_DIR", pasta)
+    abertos: list[Path] = []
+    monkeypatch.setattr(app, "_reveal", abertos.append)
+
+    app.open_log_folder()
+
+    assert abertos == [pasta]
+
+
+def test_o_laudo_da_propria_pagina_abre_ele_mesmo(app, tmp_path: Path, monkeypatch):
+    laudo = _saida(app, "reuniao", ".report.txt", "laudo")
+    app.page_report.rebuild()
+    abertos: list[Path] = []
+    monkeypatch.setattr(app, "_reveal", abertos.append)
+
+    app.page_report.open_third()
+
+    assert abertos == [laudo], "na página do laudo, o botão abre o próprio arquivo"
+
+
+def test_da_legenda_o_botao_abre_o_laudo_do_trabalho(app, tmp_path: Path, monkeypatch):
+    laudo = _saida(app, "reuniao", ".report.txt", "laudo")
+    _saida(app, "reuniao", ".srt", "1\n00:00:00,000 --> 00:00:01,000\noi\n")
+    app.page_subtitles.rebuild()
+    abertos: list[Path] = []
+    monkeypatch.setattr(app, "_reveal", abertos.append)
+
+    app.page_subtitles.open_third()
+
+    assert abertos == [laudo]

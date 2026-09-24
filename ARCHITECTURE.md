@@ -36,6 +36,7 @@ src/lauda/
   cli.py          os comandos de terminal (run, doctor, disco, models, app, ui)
   desktop.py      a janela nativa: layout, tema, eventos, resultado
   widgets.py      os widgets arredondados (o ttk nao arredonda nada)
+  pages.py        Relatorio/Transcricao/Legendas: uma aba por arquivo
   theme.py        as duas paletas + o arquivo de preferencias ui.json
 
   pipeline.py     a orquestracao: e aqui que se le a ordem das etapas
@@ -164,9 +165,9 @@ seção "Empacotar para distribuir".
 
 ---
 
-## 7. Se você veio do backlog do Lauda Local
+## 7. Se você veio do backlog do Vellum
 
-O arquivo `LAUDA_BACKLOG.md` foi escrito sem leitura deste repositório e supõe
+O arquivo `VELLUM_BACKLOG.md` (o nome é de uma versão anterior do produto) foi escrito sem leitura deste repositório e supõe
 Electron/React, `%APPDATA%` e `Promise.all` no STT. Nada disso existe aqui.
 Antes de implementar qualquer item de lá, confira a premissa contra este
 documento — vários já estavam resolvidos e outros descrevem uma aplicação

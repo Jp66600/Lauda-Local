@@ -53,6 +53,11 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 
 A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
 
+**0.14.0-beta**
+- **Relatório e Legendas ganharam as mesmas abas da Transcrição**: uma por
+  arquivo da pasta de saída, com Atualizar, nome do arquivo e os três botões.
+- **Registro virou página própria**, em vez de um modo escondido da Relatório.
+
 **0.13.0-beta**
 - **Falha na diarização deixou de custar a transcrição.** Ela agora dá sinal de
   vida (antes ficava muda e era confundida com travamento), o rebaixamento
@@ -220,8 +225,8 @@ direto para `lauda-app.exe`. Dois cliques abrem uma **janela nativa** — não
 é site, não abre navegador e não fica console preto atrás. Use `-StartMenu` para
 criar também no Menu Iniciar, ou `-NoDesktop` para só lá.
 
-A janela tem uma **barra lateral** com sete páginas — Novo trabalho, Relatório,
-Transcrição, Arquivos, Desempenho, Ajuda e Configurações. Em "Novo trabalho" você
+A janela tem uma **barra lateral** com nove páginas — Novo trabalho, Relatório,
+Registro, Transcrição, Legendas, Arquivos, Desempenho, Ajuda e Configurações. Em "Novo trabalho" você
 **arrasta o áudio ou vídeo** para a área tracejada (ou clica nela para abrir o
 explorador de arquivos do sistema); à direita ficam idioma, qualidade, os
 recursos opcionais e a pasta de saída; no rodapé, o botão Processar e uma

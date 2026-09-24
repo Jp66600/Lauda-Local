@@ -1,4 +1,4 @@
-LAUDA LOCAL — versão de teste 0.13.1-beta
+LAUDA LOCAL — versão de teste 0.14.0-beta
 =========================================
 
 O que é
@@ -58,11 +58,16 @@ fechar mesmo: quando você abrir de novo e mandar processar o MESMO arquivo com
 as MESMAS opções, ele pula tudo que já estava pronto.
 
 
-A página "Transcrição"
-----------------------
-Ela mostra uma aba para cada transcrição que existe na sua pasta de saída —
-inclusive as de antes, feitas em outro dia. Clique na aba para ler aquele
-texto. Acima dele aparecem o nome do arquivo, a duração e o caminho completo.
+As páginas de resultado
+-----------------------
+"Relatório", "Transcrição" e "Legendas" são a mesma página com outro arquivo:
+cada uma mostra uma aba para cada arquivo daquele tipo que existe na sua pasta
+de saída — inclusive os de antes, feitos em outro dia. Clique na aba para ler.
+Acima do texto aparecem o nome do arquivo, a duração e o caminho completo.
+
+"Registro" é página separada: mostra o que o programa está fazendo agora,
+etapa por etapa. Os botões dela abrem a pasta dos logs e copiam o registro —
+é o que eu peço quando alguém relata um problema.
 
 Embaixo, três botões:
 

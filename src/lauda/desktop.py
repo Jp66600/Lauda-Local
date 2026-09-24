@@ -50,7 +50,8 @@ from .limits import DEFAULT as LIMITS_DEFAULT
 from .limits import MAX_PERCENT, MIN_PERCENT, PRESETS, ResourceLimits, preset_by_key, preset_for
 from .limits import load as load_limits
 from .limits import save as save_limits
-from .logging_setup import LOG_PATH, log_uncaught, setup_logging
+from .logging_setup import LOG_DIR, LOG_PATH, log_uncaught, setup_logging
+from .pages import FileTabsPage, PageSpec
 from .profile import icon_path, migrate_legacy_profile, models_dir
 from .summarize import list_models, pick_model, pull_model
 from .theme import (
@@ -79,7 +80,6 @@ from .widgets import (
     RoundedTabs,
     SideNav,
     Stepper,
-    TabButton,
     ToggleSwitch,
     draw_icon,
     mix,
@@ -245,12 +245,36 @@ BOM SABER
 #: guarda tudo; aqui é só o que a pessoa consegue rolar sem a janela engasgar.
 LOG_VIEW_LINES = 2000
 
-#: Abas de transcricao por linha, altura de cada linha e quantas linhas ficam
-#: visiveis antes de a area comecar a rolar. Nenhuma transcricao e escondida:
-#: a pasta de saida pode ter dezenas, e todas viram aba.
-TRANSCRIPT_COLUMNS = 3
-TAB_ROW_HEIGHT = 40
-TAB_MAX_ROWS = 3
+#: As tres paginas que leem a pasta de saida. O que muda entre elas e o
+#: sufixo do arquivo — o resto do comportamento vive em `pages.py`.
+PAGE_REPORT = PageSpec(
+    key="report",
+    title="Relatório",
+    icon="doc",
+    suffixes=(".report.txt",),
+    empty="O laudo aparece aqui depois de processar.\n\n"
+          "Cada arquivo processado vira uma aba acima, com o nome dele.",
+    third_button="Abrir este laudo",
+    third_opens="self",
+)
+PAGE_TRANSCRIPT = PageSpec(
+    key="transcript",
+    title="Transcrição",
+    icon="transcript",
+    suffixes=(".transcript.txt",),
+    empty="O texto corrido aparece aqui depois de processar.\n\n"
+          "Cada arquivo transcrito vira uma aba acima, com o nome dele.",
+)
+PAGE_SUBTITLES = PageSpec(
+    key="subtitles",
+    title="Legendas",
+    icon="film",
+    suffixes=(".srt", ".vtt"),
+    empty="As legendas aparecem aqui depois de processar.\n\n"
+          "Ligue .srt ou .vtt nos recursos do trabalho — cada arquivo gerado "
+          "vira uma aba acima, com os tempos de entrada e saída.",
+    label_suffix=True,
+)
 
 
 class QueueLogHandler(logging.Handler):
@@ -320,7 +344,6 @@ class LaudaApp:
         self._log_lines: list[str] = []
         self._pulling = False
         self._extra_outputs: list[str] = []
-        self._report_view = "report"   # "report" | "log"
         self._last_stage: str | None = None
         self._job_started: float | None = None
         self._eta_seconds: float | None = None
@@ -595,8 +618,17 @@ class LaudaApp:
         self._build_sidebar_footer()
 
         self._build_job_page()
-        self.tab_report, self.text_report = self._text_page("Relatório", "doc", actions=True)
-        self._build_plain_page()
+
+        # Relatório, Transcrição e Legendas são a mesma página com outro
+        # sufixo: uma aba por arquivo da pasta de saída.
+        self.page_report = FileTabsPage(self, PAGE_REPORT)
+        self.page_report.build()
+        self._build_log_page()
+        self.page_transcript = FileTabsPage(self, PAGE_TRANSCRIPT)
+        self.page_transcript.build()
+        self.page_subtitles = FileTabsPage(self, PAGE_SUBTITLES)
+        self.page_subtitles.build()
+
         self._build_files_page()
         self._build_limits_page()
         self._build_help_page()
@@ -606,10 +638,15 @@ class LaudaApp:
         self._register_prefs()
         self._refresh_prefs_summary()
         self._set_text(self.text_help, STEPS_TEXT)
-        self._set_text(self.text_report, "O relatório aparece aqui depois de processar.")
-        self._refresh_transcript_tabs()
+        for pagina in self.file_pages:
+            pagina.rebuild()
         self._refresh_files_page()
         self.nav.select(self.tab_job)
+
+    @property
+    def file_pages(self) -> tuple[FileTabsPage, ...]:
+        """As três páginas que leem a pasta de saída."""
+        return (self.page_report, self.page_transcript, self.page_subtitles)
 
     # ------------------------------------------------------- preferências --
     def _register_prefs(self) -> None:
@@ -653,7 +690,8 @@ class LaudaApp:
         pasta = self.folder_var.get().strip()
         if pasta != self._last_output_dir:
             self._last_output_dir = pasta
-            self._refresh_transcript_tabs()
+            for pagina in self.file_pages:
+                pagina.rebuild()
 
     def _restore_prefs(self) -> None:
         """Aplica o que estava salvo, descartando valor que não existe mais."""
@@ -707,38 +745,18 @@ class LaudaApp:
         self._log_lines.append(linha)
         if len(self._log_lines) > LOG_VIEW_LINES:
             del self._log_lines[: len(self._log_lines) - LOG_VIEW_LINES]
-        if self._report_view != "log" or not hasattr(self, "text_report"):
+        if not hasattr(self, "text_log"):
             return
 
         # Só acompanha o fim se a pessoa já estava no fim. Quem rolou para cima
         # está lendo alguma coisa; puxar a tela seria hostil.
-        no_fim = self.text_report.yview()[1] > 0.999
-        self.text_report.configure(state="normal")
-        self.text_report.insert("end", linha + "\n")
-        self.text_report.configure(state="disabled")
+        no_fim = self.text_log.yview()[1] > 0.999
+        self.text_log.configure(state="normal")
+        self.text_log.insert("end", linha + "\n")
+        self.text_log.configure(state="disabled")
         if no_fim:
-            self.text_report.see("end")
+            self.text_log.see("end")
 
-    def _show_report_view(self, vista: str) -> None:
-        """Alterna a página Relatório entre o registro e o laudo."""
-        self._report_view = vista
-        if vista == "log":
-            self._set_text(self.text_report, "\n".join(self._log_lines))
-            self.text_report.see("end")
-            self.button_view.configure(text="Ver o relatório")
-            return
-
-        caminho = (self.result.outputs.get("report.txt") if self.result else None)
-        if caminho and Path(caminho).exists():
-            self._set_text(self.text_report, Path(caminho).read_text(encoding="utf-8"))
-        else:
-            self._set_text(self.text_report, "O relatório aparece aqui depois de processar.")
-        self.button_view.configure(text="Ver o registro")
-
-    def toggle_report_view(self) -> None:
-        self._show_report_view("report" if self._report_view == "log" else "log")
-
-    # ------------------------------------------------------------- Ollama --
     def check_ollama(self) -> None:
         """Pergunta ao Ollama o que ele tem, sem travar a janela."""
         self.ollama_status.configure(text="Verificando…")
@@ -1162,308 +1180,72 @@ class LaudaApp:
         self._accept_files([Path(str(bruto)) for bruto in caminhos])
 
     # --------------------------------------------------------- páginas de texto --
-    def _text_page(
-        self, title: str, icon: str, actions: bool = False
-    ) -> tuple[tk.Frame, tk.Text]:
+    def _text_page(self, title: str, icon: str) -> tuple[tk.Frame, tk.Text]:
         card = RoundedCard(self.content, padding=12, radius=16)
         self._cards.append(card)
         _, texto = self._text_area(card.body)
-        if actions:
-            self._build_actions(card.body)
         self.nav.add(card, title, icon)
         return card, texto  # type: ignore[return-value]
 
-    # -------------------------------------------------------- Transcrição --
-    def _build_plain_page(self) -> None:
-        """Página "Transcrição": uma aba por transcrição na pasta de saída.
+    # ------------------------------------------------------------ Registro --
+    def _build_log_page(self) -> None:
+        """Página "Registro": o que o programa está fazendo, ao vivo.
 
-        Antes ela mostrava só o último trabalho. Com uma fila de cinco
-        arquivos, os quatro primeiros ficavam invisíveis, e a página não dizia
-        sequer de qual arquivo era o texto na tela.
-
-        As abas ficam numa área que rola: a pasta de saída pode ter dezenas de
-        transcrições, e todas têm de caber — sem empurrar o texto para fora da
-        tela.
+        Antes isto era um modo escondido da página Relatório, acessível por um
+        botão que alternava as duas coisas no mesmo lugar. Separar resolve a
+        pergunta "onde foi parar o meu laudo?" enquanto o trabalho roda.
         """
         card = RoundedCard(self.content, padding=12, radius=16)
         self._cards.append(card)
-        self.tab_plain = card
+        self.tab_log = card
 
-        moldura = tk.Frame(card.body, background=self.theme.paper)
-        moldura.pack(fill="x", pady=(0, 8))
-        moldura.columnconfigure(0, weight=1)
-        self._panels.append(moldura)
+        ttk.Label(
+            card.body,
+            text="O que está acontecendo agora. Durante um trabalho, cada etapa "
+                 "aparece aqui na hora em que acontece.",
+            style="Hint.TLabel", justify="left", wraplength=760,
+        ).pack(fill="x", pady=(0, 8))
 
-        self.transcript_canvas = tk.Canvas(
-            moldura, height=TAB_ROW_HEIGHT, highlightthickness=0, borderwidth=0,
-            background=self.theme.paper,
-        )
-        self.transcript_canvas.grid(row=0, column=0, sticky="nsew")
-        self.transcript_tabs = tk.Frame(
-            self.transcript_canvas, background=self.theme.paper
-        )
-        self.transcript_canvas.create_window(
-            (0, 0), window=self.transcript_tabs, anchor="nw", tags="abas"
-        )
-        self.transcript_tabs.bind("<Configure>", self._on_tabs_resized)
-        self._panels.append(self.transcript_tabs)
-
-        self.transcript_scroll = RoundedScrollbar(
-            moldura, orient="vertical", command=self.transcript_canvas.yview,
-            background=self.theme.paper,
-        )
-        self.transcript_scroll.grid(row=0, column=1, sticky="ns")
-        self._scrollbars.append(self.transcript_scroll)
-        self.transcript_canvas.configure(yscrollcommand=self.transcript_scroll.set)
-
-        self.button_transcript_refresh = RoundedButton(
-            moldura, text="Atualizar", command=self.refresh_transcripts,
-            font=self.font_small, radius=11,
-        )
-        self.button_transcript_refresh.grid(row=0, column=2, sticky="n", padx=(8, 0))
-        self._buttons.append(self.button_transcript_refresh)
-
-        self.transcript_buttons: dict[str, TabButton] = {}
-
-        self.transcript_label = ttk.Label(
-            card.body, text="", style="Hint.TLabel", justify="left", wraplength=760
-        )
-        self.transcript_label.pack(fill="x", pady=(0, 8))
-
-        _, self.text_plain = self._text_area(card.body)
+        _, self.text_log = self._text_area(card.body)
 
         fileira = tk.Frame(card.body, background=self.theme.paper)
         fileira.pack(fill="x", pady=(10, 2))
         self._panels.append(fileira)
 
-        self.button_transcript_folder = RoundedButton(
-            fileira, text="Abrir o local do arquivo",
-            command=self.open_transcript_folder, font=self.font_body, icon="folder",
+        self.button_log_folder = RoundedButton(
+            fileira, text="Abrir a pasta dos logs", command=self.open_log_folder,
+            font=self.font_body, icon="folder",
         )
-        self.button_transcript_folder.pack(side="left")
-        self.button_transcript_copy = RoundedButton(
-            fileira, text="Copiar o texto", command=self.copy_transcript,
+        self.button_log_folder.pack(side="left")
+        self.button_log_copy = RoundedButton(
+            fileira, text="Copiar o registro", command=self.copy_log,
             font=self.font_body,
         )
-        self.button_transcript_copy.pack(side="left", padx=(10, 0))
-        self.button_transcript_report = RoundedButton(
-            fileira, text="Abrir o laudo deste arquivo",
-            command=self.open_transcript_report, font=self.font_body, icon="doc",
-        )
-        self.button_transcript_report.pack(side="left", padx=(10, 0))
-        self._buttons += [
-            self.button_transcript_folder,
-            self.button_transcript_copy,
-            self.button_transcript_report,
-        ]
+        self.button_log_copy.pack(side="left", padx=(10, 0))
+        self._buttons += [self.button_log_folder, self.button_log_copy]
 
-        self.nav.add(card, "Transcrição", "transcript")
+        self.nav.add(card, "Registro", "sliders")
 
-    def _transcript_entries(self) -> list[history.HistoryEntry]:
-        """Tudo que está transcrito **na pasta de saída**, do mais novo ao mais velho.
+    def open_log_folder(self) -> None:
+        """A pasta dos logs é o que eu peço quando alguém relata um problema."""
+        if LOG_DIR.exists():
+            self._reveal(LOG_DIR)
+        else:  # pragma: no cover - só antes da primeira execução
+            messagebox.showinfo(APP_NAME, f"Ainda não há logs em:\n{LOG_DIR}")
 
-        A fonte é a pasta, não o histórico: quem já tinha cinco transcrições
-        ali não veria nenhuma delas, porque o histórico só conhece o que este
-        aplicativo processou — e só desde a versão que passou a guardar o
-        caminho do texto. A pasta é o que o usuário enxerga no Explorador, e é
-        com ela que as abas têm de bater.
-
-        O histórico ainda serve para enfeitar: dele vêm o nome do arquivo de
-        origem, a duração e o modelo, quando aquele trabalho passou por aqui.
-        """
-        pasta = Path(self.folder_var.get().strip() or str(PROJECT_ROOT / "saida"))
-        try:
-            arquivos = sorted(
-                pasta.glob("*.transcript.txt"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-        except OSError:  # pragma: no cover - pasta some entre o glob e o stat
-            return []
-
-        por_caminho = {
-            entrada.transcript_path: entrada
-            for entrada in history.load()
-            if entrada.transcript_path
-        }
-
-        entradas: list[history.HistoryEntry] = []
-        for arquivo in arquivos:
-            conhecido = por_caminho.get(str(arquivo))
-            if conhecido is not None:
-                entradas.append(conhecido)
-            else:
-                # Transcrição que este aplicativo não processou (ou processou
-                # antes de guardar o caminho): o nome sai do próprio arquivo.
-                laudo = arquivo.with_name(arquivo.name[: -len(".transcript.txt")] + ".report.txt")
-                entradas.append(history.HistoryEntry(
-                    file_name=arquivo.name[: -len(".transcript.txt")],
-                    transcript_path=str(arquivo),
-                    report_path=str(laudo) if laudo.exists() else "",
-                ))
-        return entradas
-
-    def _refresh_transcript_tabs(self, selecionar: str | None = None) -> None:
-        """Redesenha as abas. `selecionar` é o caminho do texto a mostrar."""
-        if not hasattr(self, "transcript_tabs"):
-            return
-        for filho in self.transcript_tabs.winfo_children():
-            filho.destroy()
-        self.transcript_buttons.clear()
-
-        entradas = self._transcript_entries()
-        if not entradas:
-            self._transcript_current = None
-            self._set_text(
-                self.text_plain,
-                "O texto corrido aparece aqui depois de processar.\n\n"
-                "Cada arquivo transcrito vira uma aba acima, com o nome dele.",
-            )
-            self.transcript_label.configure(text="")
-            self._set_transcript_buttons("disabled")
-            return
-
-        atual = selecionar or self._transcript_current
-        if atual not in {e.transcript_path for e in entradas}:
-            atual = entradas[0].transcript_path
-
-        # Três por linha: nome de arquivo é comprido. Passando de três linhas,
-        # a área rola em vez de crescer.
-        for indice, entrada in enumerate(entradas):
-            botao = TabButton(
-                self.transcript_tabs,
-                text=history._cut(entrada.file_name or "(sem nome)", 26),
-                font=self.font_body,
-                command=self._transcript_command(entrada.transcript_path),
-                parent_bg=self.theme.paper,
-            )
-            botao.grid(
-                row=indice // TRANSCRIPT_COLUMNS,
-                column=indice % TRANSCRIPT_COLUMNS,
-                sticky="w", padx=(0, 6), pady=(0, 4),
-            )
-            botao.apply_theme(
-                fill_on=mix(self.theme.paper, self.theme.accent, 0.16),
-                fill_off=self.theme.paper,
-                fg_on=self.theme.accent,
-                fg_off=self.theme.ink_soft,
-                parent_bg=self.theme.paper,
-            )
-            botao.set_selected(entrada.transcript_path == atual)
-            self.transcript_buttons[entrada.transcript_path] = botao
-
-        self.show_transcript(atual)
+    def copy_log(self) -> None:
+        self.root.clipboard_clear()
+        self.root.clipboard_append(self.text_log.get("1.0", "end-1c"))
+        self.status_label.configure(text="Registro copiado para a área de transferência.")
 
     def _on_page_changed(self, page: tk.Widget) -> None:
         """Abrir uma página a atualiza. Tela velha é tela errada."""
-        if page is getattr(self, "tab_plain", None):
-            self.refresh_transcripts()
-        elif page is getattr(self, "tab_files", None):
+        for pagina in self.file_pages:
+            if page is pagina.card:
+                pagina.refresh()
+                return
+        if page is getattr(self, "tab_files", None):
             self._refresh_files_page()
-
-    def refresh_transcripts(self) -> None:
-        """Relê a pasta de saída: entra o que apareceu, sai o que foi apagado.
-
-        Mantém a aba que estava aberta, se o arquivo dela continuar lá — quem
-        clicou em "Atualizar" quer ver o que mudou, não perder o lugar.
-        """
-        antes = set(self.transcript_buttons)
-        self._refresh_transcript_tabs()
-        depois = set(self.transcript_buttons)
-
-        novas, sumiram = len(depois - antes), len(antes - depois)
-        if novas or sumiram:
-            partes = []
-            if novas:
-                partes.append(f"{novas} transcrição(ões) nova(s)")
-            if sumiram:
-                partes.append(f"{sumiram} sumiu(ram) da pasta")
-            self.status_label.configure(
-                text="Transcrições atualizadas: " + " e ".join(partes) + ".",
-                foreground=self.theme.ink_soft,
-            )
-
-    def _on_tabs_resized(self, _event: tk.Event) -> None:
-        """A área das abas cresce até três linhas; daí em diante ela rola."""
-        self.transcript_canvas.configure(
-            scrollregion=self.transcript_canvas.bbox("all")
-        )
-        pedido = self.transcript_tabs.winfo_reqheight()
-        altura = max(TAB_ROW_HEIGHT, min(pedido, TAB_ROW_HEIGHT * TAB_MAX_ROWS))
-        self.transcript_canvas.configure(height=altura)
-
-        # Cabe tudo? A barra sai da frente em vez de ficar como enfeite.
-        if pedido <= altura:
-            self.transcript_scroll.grid_remove()
-        else:
-            self.transcript_scroll.grid()
-
-    def _transcript_command(self, caminho: str) -> Callable[[], None]:
-        return lambda: self.show_transcript(caminho)
-
-    def show_transcript(self, caminho: str) -> None:
-        """Carrega na tela o texto corrido de um dos arquivos já transcritos."""
-        entrada = next(
-            (e for e in self._transcript_entries() if e.transcript_path == caminho), None
-        )
-        if entrada is None:
-            self._refresh_transcript_tabs()
-            return
-
-        self._transcript_current = caminho
-        for alvo, botao in self.transcript_buttons.items():
-            botao.set_selected(alvo == caminho)
-
-        try:
-            conteudo = Path(caminho).read_text(encoding="utf-8")
-        except OSError as exc:
-            conteudo = f"Não consegui ler o arquivo:\n{caminho}\n\n{exc}"
-        self._set_text(self.text_plain, conteudo or "(nenhuma fala foi encontrada)")
-
-        detalhes = [entrada.file_name or "(sem nome)"]
-        if entrada.duration:
-            detalhes.append(_clock(entrada.duration))
-        if entrada.model:
-            detalhes.append(entrada.model)
-        self.transcript_label.configure(text="  •  ".join(detalhes) + f"\n{caminho}")
-        self._set_transcript_buttons("normal")
-
-    def _set_transcript_buttons(self, state: str) -> None:
-        for botao in (
-            self.button_transcript_folder,
-            self.button_transcript_copy,
-            self.button_transcript_report,
-        ):
-            botao.configure(state=state)
-
-    def open_transcript_folder(self) -> None:
-        """Abre a pasta de saída com o .txt já selecionado, pronto para copiar."""
-        if self._transcript_current:
-            self._reveal_in_folder(Path(self._transcript_current))
-
-    def open_transcript_report(self) -> None:
-        entrada = next(
-            (e for e in self._transcript_entries()
-             if e.transcript_path == self._transcript_current),
-            None,
-        )
-        if entrada is None:
-            return
-        if entrada.report_path and Path(entrada.report_path).exists():
-            self._reveal(Path(entrada.report_path))
-        else:
-            messagebox.showinfo(
-                APP_NAME,
-                "O laudo deste trabalho não está mais na pasta de saída.",
-            )
-
-    def copy_transcript(self) -> None:
-        conteudo = self.text_plain.get("1.0", "end-1c")
-        self.root.clipboard_clear()
-        self.root.clipboard_append(conteudo)
-        self.status_label.configure(
-            text="Transcrição copiada para a área de transferência."
-        )
 
     def _build_files_page(self) -> None:
         """Página "Arquivos": o trabalho recém-terminado e o histórico de todos.
@@ -1525,36 +1307,6 @@ class LaudaApp:
             "Nenhum laudo do histórico foi encontrado em disco. Talvez a pasta de "
             "saída tenha sido movida ou apagada.",
         )
-
-    def _build_actions(self, parent: tk.Misc) -> None:
-        """Abrir a pasta, abrir o relatório e copiar — só valem depois de processar."""
-        fileira = tk.Frame(parent, background=self.theme.paper)
-        fileira.pack(fill="x", pady=(10, 2))
-        self._panels.append(fileira)
-
-        self.button_folder = RoundedButton(
-            fileira, text="Abrir a pasta", command=self.open_folder,
-            font=self.font_body, state="disabled", icon="folder",
-        )
-        self.button_folder.pack(side="left")
-        self.button_open = RoundedButton(
-            fileira, text="Abrir o relatório", command=self.open_report,
-            font=self.font_body, state="disabled", icon="doc",
-        )
-        self.button_open.pack(side="left", padx=(10, 0))
-        self.button_copy = RoundedButton(
-            fileira, text="Copiar o texto", command=self.copy_text,
-            font=self.font_body, state="disabled",
-        )
-        self.button_copy.pack(side="left", padx=(10, 0))
-        self.button_view = RoundedButton(
-            fileira, text="Ver o registro", command=self.toggle_report_view,
-            font=self.font_body,
-        )
-        self.button_view.pack(side="right")
-        self._buttons += [
-            self.button_folder, self.button_open, self.button_copy, self.button_view
-        ]
 
     def _text_area(self, parent: tk.Misc) -> tuple[tk.Frame, tk.Text]:
         frame = tk.Frame(parent, background=self.theme.paper, highlightthickness=0)
@@ -2539,15 +2291,13 @@ class LaudaApp:
         self._last_stage = None
         self._job_started = time.monotonic()
         self._eta_seconds = None
-        self._show_report_view("log")
-        self.nav.select(self.tab_report)
+        self.nav.select(self.tab_log)
         log.info("=" * 60)
         log.info("Arquivo   : %s", options.input_path.name)
         log.info("Saída     : %s", options.output_dir)
         log.info("Modelo    : %s | idioma: %s | device: %s",
                  options.model, options.language, options.device)
         log.info("Recursos  : %s", self._enabled_features() or "nenhum")
-        self._set_buttons("disabled")
         self.progress.configure(value=0)
         self.status_label.configure(text="Começando...", foreground=self.theme.ink_soft)
 
@@ -2904,9 +2654,6 @@ class LaudaApp:
         self.go_button.configure(state="normal", text="Processar")
         self._clear_pause()
 
-        report_path = result.outputs.get("report.txt")
-        if report_path and Path(report_path).exists():
-            self._set_text(self.text_report, Path(report_path).read_text(encoding="utf-8"))
         # Antes do bloco da página "Arquivos": é aqui que a cópia da legenda
         # ao lado do vídeo acontece, e ela precisa aparecer na lista deste
         # trabalho — não na do próximo.
@@ -2916,15 +2663,15 @@ class LaudaApp:
         history.record(history.entry_from_result(result, self.folder_var.get()))
         self._refresh_files_page()
 
-        # A aba deste arquivo entra e já fica selecionada; as dos anteriores
-        # continuam na tela, que é o ponto de ter uma fila.
-        self._refresh_transcript_tabs(
-            selecionar=result.outputs.get("transcript.txt")
+        # A aba deste arquivo entra e já fica selecionada em cada página; as
+        # dos anteriores continuam na tela, que é o ponto de ter uma fila.
+        self.page_report.rebuild(result.outputs.get("report.txt"))
+        self.page_transcript.rebuild(result.outputs.get("transcript.txt"))
+        self.page_subtitles.rebuild(
+            result.outputs.get("srt") or result.outputs.get("vtt")
         )
 
-        self._show_report_view("report")
-        self.nav.select(self.tab_report)
-        self._set_buttons("normal")
+        self.nav.select(self.page_report.card)
         self._set_state("Concluído", self.theme.success)
 
         speed = result.processing.realtime_factor or 0
@@ -3048,10 +2795,6 @@ class LaudaApp:
         # Um arquivo ruim no meio de dez não pode parar os outros nove.
         self._advance_queue()
 
-    def _set_buttons(self, state: str) -> None:
-        for button in (self.button_folder, self.button_open, self.button_copy):
-            button.configure(state=state)
-
     # ----------------------------------------------------------------- ações --
     def _reveal(self, path: Path) -> None:
         try:
@@ -3130,18 +2873,6 @@ class LaudaApp:
 
     def open_folder(self) -> None:
         self._reveal(Path(self.folder_var.get()))
-
-    def open_report(self) -> None:
-        if self.result and (path := self.result.outputs.get("report.txt")):
-            self._reveal(Path(path))
-
-    def copy_text(self) -> None:
-        current = self.nav.select()
-        widget = self.text_plain if current == str(self.tab_plain) else self.text_report
-        content = widget.get("1.0", "end-1c")
-        self.root.clipboard_clear()
-        self.root.clipboard_append(content)
-        self.status_label.configure(text="Texto copiado para a área de transferência.")
 
     def shutdown(self) -> None:
         logging.getLogger("lauda").removeHandler(self.log_handler)

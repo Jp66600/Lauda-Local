@@ -176,27 +176,30 @@ def build() -> Path:
             "precisa falar nesses termos — é disso que trata a segunda metade deste "
             "documento."
         ),
-        h("Os três arquivos que formam a interface", "h2"),
+        h("Os quatro arquivos que formam a interface", "h2"),
         grid(
             ["Arquivo", "Linhas", "Responsabilidade"],
             [
-                ["theme.py", "215",
+                ["theme.py", "257",
                  "As duas paletas (clara e escura), a detecção do tema do Windows e a "
                  "preferência salva do usuário. <b>Nenhuma cor deve existir fora daqui.</b>"],
-                ["widgets.py", "1750",
+                ["widgets.py", "1810",
                  "Os widgets arredondados desenhados em Canvas: cartão, botão, "
                  "navegação lateral, zona de soltar, interruptor, trilha de etapas, "
                  "barra de progresso, controle deslizante, barra de rolagem, moldura "
                  "de campo — e os ícones de traço."],
-                ["desktop.py", "1480",
+                ["desktop.py", "2940",
                  "A janela: monta o layout, aplica o tema, lê o que o usuário escolheu, "
                  "dispara o processamento em outra thread e mostra o resultado."],
+                ["pages.py", "328",
+                 "As páginas Relatório, Transcrição e Legendas, que são a mesma coisa "
+                 "com outro sufixo de arquivo: uma aba por arquivo da pasta de saída."],
             ],
             widths=[30 * mm, 16 * mm, W - 46 * mm],
         ),
         Spacer(1, 3 * mm),
         note(
-            "Só esses três",
+            "Só esses quatro",
             "Qualquer mudança visual acontece dentro deles. Se um pedido de alteração de "
             "tela levar você a mexer em <b>pipeline.py</b>, <b>runner.py</b> ou "
             "<b>report.py</b>, o pedido provavelmente misturou aparência com "
@@ -211,14 +214,16 @@ def build() -> Path:
         code([
             "root (Tk)",
             " +-- outer",
-            "      +-- nav (SideNav, 158 px)  7 paginas + versao e estado no pe",
+            "      +-- nav (SideNav, 158 px)  9 paginas + versao e estado no pe",
             "      +-- content   mostra a pagina escolhida na barra lateral",
             "           +-- tab_job        Novo trabalho",
             "           |    +-- cartao esquerdo   DropZone + linha do arquivo",
             "           |    +-- cartao direito    idioma, qualidade, recursos, saida",
             "           |    +-- rodape   botao Processar + Stepper + progresso",
-            "           +-- tab_report     Relatorio  (+ abrir pasta / abrir / copiar)",
-            "           +-- tab_plain      Transcricao (uma aba por arquivo)",
+            "           +-- page_report    Relatorio   |  os tres sao FileTabsPage",
+            "           +-- tab_log        Registro    |  (pages.py): uma aba por",
+            "           +-- page_transcript Transcricao|  arquivo da pasta de saida",
+            "           +-- page_subtitles Legendas    |",
             "           +-- tab_files      Arquivos   (ultimo trabalho + historico)",
             "           +-- tab_limits     Desempenho (Resumo/Limites/Diagnostico)",
             "           +-- tab_help       Ajuda          (o passo a passo)",
