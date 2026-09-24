@@ -256,3 +256,112 @@ def test_o_worker_do_executavel_empacotado_chama_a_si_mesmo(monkeypatch, tmp_pat
     assert comando[0].endswith("Lauda Local.exe")
     assert "--worker" in comando
     assert "-m" not in comando, "o executável empacotado não entende -m"
+
+
+# --------------------------------------------------------------------------- #
+# Pausar e retomar
+# --------------------------------------------------------------------------- #
+def test_pausar_congela_o_processo_e_retomar_conclui(
+    entrada: Path, tmp_path: Path, monkeypatch
+):
+    """O filho só termina depois de descongelado — e termina inteiro."""
+    import threading
+    import time
+
+    marcador = tmp_path / "passou.txt"
+    script = _fake_worker(tmp_path, f"""
+        import pathlib
+        emit({{'t': 'progress', 'stage': 'asr', 'fraction': 0.5, 'message': 'meio'}})
+        time.sleep(0.6)
+        pathlib.Path({str(marcador)!r}).write_text('fim', encoding='utf-8')
+        sys.path.insert(0, {str(Path(__file__).parent)!r})
+        from tests_helpers import write_fake_result
+        write_fake_result(job['result_path'])
+        emit({{'t': 'done', 'result': job['result_path']}})
+    """)
+    _use_fake(monkeypatch, script)
+
+    pausa = threading.Event()
+    pausa.set()          # pausado antes mesmo de o filho chegar ao fim
+
+    def solta_depois() -> None:
+        time.sleep(1.2)
+        pausa.clear()
+
+    threading.Thread(target=solta_depois, daemon=True).start()
+    comeco = time.monotonic()
+    resultado, tentativas = run_with_recovery(
+        _options(entrada, tmp_path), pause=pausa, checkpoint_root=tmp_path / "cp"
+    )
+    duracao = time.monotonic() - comeco
+
+    assert resultado.text, "o trabalho tem de concluir depois de retomado"
+    assert len(tentativas) == 1, "pausar não pode disparar uma nova tentativa"
+    assert marcador.exists()
+    assert duracao >= 1.2, "ficou parado enquanto a pausa estava ligada"
+
+
+def test_pausado_nao_conta_como_travado(entrada: Path, tmp_path: Path, monkeypatch):
+    """O vigia de travamento tem de parar junto: senão pausar é o mesmo que matar."""
+    import threading
+    import time
+
+    script = _fake_worker(tmp_path, """
+        emit({'t': 'progress', 'stage': 'asr', 'fraction': 0.5, 'message': 'meio'})
+        time.sleep(0.4)
+        sys.path.insert(0, %r)
+        from tests_helpers import write_fake_result
+        write_fake_result(job['result_path'])
+        emit({'t': 'done', 'result': job['result_path']})
+    """ % str(Path(__file__).parent))
+    _use_fake(monkeypatch, script)
+
+    pausa = threading.Event()
+    pausa.set()
+    threading.Thread(
+        target=lambda: (time.sleep(1.0), pausa.clear()), daemon=True
+    ).start()
+
+    # Teto de travamento BEM menor que o tempo pausado: sem a trégua, o
+    # supervisor mataria o filho antes de ele poder terminar.
+    resultado, tentativas = run_with_recovery(
+        _options(entrada, tmp_path), pause=pausa, stall_timeout=0.3,
+        checkpoint_root=tmp_path / "cp",
+    )
+
+    assert resultado.text
+    assert len(tentativas) == 1, "o vigia não pode acordar durante a pausa"
+    assert not tentativas[0].stalled
+
+
+def test_cancelar_durante_a_pausa_descongela_antes_de_matar(
+    entrada: Path, tmp_path: Path, monkeypatch
+):
+    """Matar processo congelado deixa zumbi; o supervisor solta antes."""
+    import threading
+
+    script = _fake_worker(tmp_path, """
+        emit({'t': 'progress', 'stage': 'asr', 'fraction': 0.5, 'message': 'meio'})
+        time.sleep(30)
+    """)
+    _use_fake(monkeypatch, script)
+
+    soltos: list[int] = []
+    original = runner._resume
+    monkeypatch.setattr(
+        runner, "_resume", lambda p: (soltos.append(p.pid), original(p))[1]
+    )
+
+    pausa, cancelar = threading.Event(), threading.Event()
+    pausa.set()
+    threading.Thread(
+        target=lambda: (__import__("time").sleep(0.8), cancelar.set()), daemon=True
+    ).start()
+
+    with pytest.raises(RecoveryFailed, match="cancelado"):
+        run_with_recovery(
+            _options(entrada, tmp_path), pause=pausa, cancel=cancelar,
+            checkpoint_root=tmp_path / "cp",
+        )
+
+    assert soltos, "descongelou antes de matar"

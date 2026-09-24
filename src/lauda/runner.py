@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -121,6 +122,7 @@ def run_with_recovery(
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     checkpoint_root: Path | None = None,
     cancel: threading.Event | None = None,
+    pause: threading.Event | None = None,
 ) -> tuple[JobResult, list[Attempt]]:
     """Processa com supervisão. Devolve o resultado e o histórico de tentativas."""
     report = progress or (lambda stage, fraction, message: None)
@@ -163,7 +165,8 @@ def run_with_recovery(
             )
 
             outcome = _run_once(
-                job_path, report, attempt, stall_timeout=stall_timeout, cancel=cancel
+                job_path, report, attempt, stall_timeout=stall_timeout,
+                cancel=cancel, pause=pause,
             )
             if outcome == "cancelado":
                 raise RecoveryFailed("Processamento cancelado.")
@@ -198,6 +201,7 @@ def _run_once(
     *,
     stall_timeout: float,
     cancel: threading.Event | None,
+    pause: threading.Event | None = None,
 ) -> str:
     """Uma tentativa. Devolve "ok", "travou", "falhou" ou "cancelado"."""
     command = _worker_command(job_path)
@@ -247,10 +251,31 @@ def _run_once(
 
     outcome = "falhou"
     done = False
+    pausado = False
     while True:
         if cancel is not None and cancel.is_set():
+            # Matar um processo congelado deixa zumbi em alguns sistemas:
+            # descongela primeiro, mata depois.
+            if pausado:
+                _resume(process)
             _kill(process)
             return "cancelado"
+
+        if pause is not None and pause.is_set():
+            if not pausado:
+                pausado = _suspend(process)
+                if pausado:
+                    log.info("Processamento pausado (processo %s congelado).", process.pid)
+            # Enquanto está parado, o relógio do watchdog não corre — senão
+            # pausar por cinco minutos seria o mesmo que matar o trabalho.
+            last_signal = time.monotonic()
+            time.sleep(0.1)
+            continue
+
+        if pausado:
+            pausado = not _resume(process)
+            last_signal = time.monotonic()
+            log.info("Processamento retomado.")
 
         with lock:
             pending, events[:] = list(events), []
@@ -304,6 +329,59 @@ def _run_once(
             else f"o processo terminou com código {process.returncode}"
         )
     return outcome
+
+
+#: Direito de congelar e descongelar um processo (PROCESS_SUSPEND_RESUME).
+_WINDOWS_SUSPEND_RESUME = 0x0800
+
+
+def _suspend(process: subprocess.Popen) -> bool:
+    """Congela o processo filho onde ele está. Diz se conseguiu.
+
+    Congelar não é matar: o modelo continua carregado e o trabalho retoma
+    exatamente do ponto em que parou, sem perder o que já foi transcrito. Em
+    troca, a memória continua ocupada — pausar não devolve RAM nem VRAM.
+    """
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            handle = ctypes.windll.kernel32.OpenProcess(
+                _WINDOWS_SUSPEND_RESUME, False, process.pid
+            )
+            if not handle:
+                return False
+            try:
+                return int(ctypes.windll.ntdll.NtSuspendProcess(handle)) == 0
+            finally:
+                ctypes.windll.kernel32.CloseHandle(handle)
+        os.kill(process.pid, signal.SIGSTOP)
+        return True
+    except Exception as exc:  # pragma: no cover - sem permissão ou processo morto
+        log.warning("Não consegui pausar o processo %s: %s", process.pid, exc)
+        return False
+
+
+def _resume(process: subprocess.Popen) -> bool:
+    """Descongela o processo filho. Diz se conseguiu."""
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            handle = ctypes.windll.kernel32.OpenProcess(
+                _WINDOWS_SUSPEND_RESUME, False, process.pid
+            )
+            if not handle:
+                return False
+            try:
+                return int(ctypes.windll.ntdll.NtResumeProcess(handle)) == 0
+            finally:
+                ctypes.windll.kernel32.CloseHandle(handle)
+        os.kill(process.pid, signal.SIGCONT)
+        return True
+    except Exception as exc:  # pragma: no cover - sem permissão ou processo morto
+        log.warning("Não consegui retomar o processo %s: %s", process.pid, exc)
+        return False
 
 
 def _kill(process: subprocess.Popen) -> None:

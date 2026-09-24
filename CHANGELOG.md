@@ -2,6 +2,35 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.12.0-beta] — 2026-09-24
+
+### Adicionado
+
+- **Pausar e retomar.** Com um trabalho em andamento, o botão fica ao lado de
+  "Processar": ele **congela o processo** onde está — uso de processador a zero
+  — e devolve do mesmo ponto ao retomar. Nada é refeito, porque nada é perdido.
+  O vigia de travamento tira folga junto: sem isso, pausar por mais de cinco
+  minutos seria o mesmo que matar o trabalho.
+- O tempo parado **não entra na estimativa** do que falta.
+
+### Mudado
+
+- **As abas da Transcrição agora vêm da pasta de saída**, não do histórico.
+  Quem já tinha cinco transcrições na pasta não via nenhuma delas: o histórico
+  só conhece o que o aplicativo processou, e só desde a versão que passou a
+  guardar o caminho do texto. A pasta é o que a pessoa enxerga no Explorador, e
+  é com ela que as abas têm de bater.
+- Trocar a pasta de saída troca as abas.
+- A área das abas **rola** depois de três linhas: nenhuma transcrição fica
+  escondida, e o texto não é empurrado para fora da tela.
+
+### Ressalvas
+
+- Pausar não devolve memória: o modelo continua carregado. Para liberar a
+  máquina de verdade, feche — o ponto de retomada assume a partir daí.
+- Fechar o aplicativo pausado perde a etapa em andamento (não o que já foi
+  transcrito).
+
 ## [0.11.0-beta] — 2026-09-23
 
 ### Adicionado

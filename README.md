@@ -53,6 +53,12 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 
 A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
 
+**0.12.0-beta**
+- **Pausar e retomar** um trabalho em andamento: o processo congela onde está
+  (processador a zero) e volta do mesmo ponto. Nada é refeito.
+- **As abas da Transcrição leem a pasta de saída**: tudo que está lá vira aba,
+  inclusive o que foi transcrito em outro dia.
+
 **0.11.0-beta**
 - **Uma aba por arquivo na página Transcrição**, com o nome do arquivo de
   origem. Processou cinco de uma vez? As cinco transcrições ficam a um clique,

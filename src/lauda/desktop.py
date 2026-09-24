@@ -245,10 +245,12 @@ BOM SABER
 #: guarda tudo; aqui é só o que a pessoa consegue rolar sem a janela engasgar.
 LOG_VIEW_LINES = 2000
 
-#: Quantas abas de transcricao a pagina mostra. Tres por linha, duas linhas:
-#: mais que isso empurra o texto para fora da tela, e a pagina Arquivos ja tem
-#: a lista completa.
-TRANSCRIPT_TABS = 6
+#: Abas de transcricao por linha, altura de cada linha e quantas linhas ficam
+#: visiveis antes de a area comecar a rolar. Nenhuma transcricao e escondida:
+#: a pasta de saida pode ter dezenas, e todas viram aba.
+TRANSCRIPT_COLUMNS = 3
+TAB_ROW_HEIGHT = 40
+TAB_MAX_ROWS = 3
 
 
 class QueueLogHandler(logging.Handler):
@@ -290,6 +292,9 @@ class LaudaApp:
         self.input_path: Path | None = None
         self.output_dir = PROJECT_ROOT / "saida"
         self.cancel_event = threading.Event()
+        self.pause_event = threading.Event()
+        self._paused_at: float | None = None
+        self._paused_seconds = 0.0
         self._snapping = False
         self.recovery_messages: list[str] = []
 
@@ -321,6 +326,7 @@ class LaudaApp:
         self._eta_seconds: float | None = None
         self._last_job_block = ""
         self._transcript_current: str | None = None
+        self._last_output_dir = ""
 
         # Fila serial: o que espera a vez. Um trabalho por vez, sempre — dois
         # modelos de transcrição ao mesmo tempo brigam pela mesma memória.
@@ -639,6 +645,14 @@ class LaudaApp:
         """
         self._schedule_save_prefs()
         self._refresh_perf()
+
+        # As abas da Transcrição são a pasta de saída: trocou a pasta, trocam
+        # as abas. Só quando ela muda de verdade — refazer a cada tecla
+        # digitada no campo jogaria fora a aba que o usuário estava lendo.
+        pasta = self.folder_var.get().strip()
+        if pasta != self._last_output_dir:
+            self._last_output_dir = pasta
+            self._refresh_transcript_tabs()
 
     def _restore_prefs(self) -> None:
         """Aplica o que estava salvo, descartando valor que não existe mais."""
@@ -1082,7 +1096,7 @@ class LaudaApp:
 
         bar = tk.Frame(page, background=self.theme.canvas)
         bar.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
-        bar.columnconfigure(1, weight=1)
+        bar.columnconfigure(2, weight=1)
         self._shells.append(bar)
 
         self.go_button = RoundedButton(
@@ -1093,21 +1107,29 @@ class LaudaApp:
         self._buttons.append(self.go_button)
         self._primary_buttons.add(self.go_button)
 
+        # So aparece com trabalho em andamento: botao morto na tela e ruido.
+        self.pause_button = RoundedButton(
+            bar, text="Pausar", command=self.toggle_pause, font=self.font_body,
+            radius=13, padding=(16, 12), state="disabled",
+        )
+        self.pause_button.grid(row=0, column=1, sticky="w", padx=(10, 0))
+        self._buttons.append(self.pause_button)
+
         self.stepper = Stepper(
             bar, steps=PIPELINE_STEPS, font=self.font_small, height=62,
             background=self.theme.canvas, accent=self.theme.accent,
             muted=self.theme.muted, ink=self.theme.ink, ink_soft=self.theme.ink_soft,
             on_check=self.theme.primary_text,
         )
-        self.stepper.grid(row=0, column=1, sticky="ew", padx=(24, 0))
+        self.stepper.grid(row=0, column=2, sticky="ew", padx=(24, 0))
 
         self.progress = RoundedProgress(bar, height=5, maximum=100)
-        self.progress.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 5))
+        self.progress.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(6, 5))
 
         self.status_label = ttk.Label(
             bar, text="Pronto para começar.", style="Subtitle.TLabel"
         )
-        self.status_label.grid(row=2, column=0, columnspan=2, sticky="w")
+        self.status_label.grid(row=2, column=0, columnspan=3, sticky="w")
 
     # ------------------------------------------------------- arrastar e soltar --
     def _enable_drop(self, widget: tk.Widget) -> bool:
@@ -1152,20 +1174,47 @@ class LaudaApp:
 
     # -------------------------------------------------------- Transcrição --
     def _build_plain_page(self) -> None:
-        """Página "Transcrição": uma aba por arquivo já transcrito.
+        """Página "Transcrição": uma aba por transcrição na pasta de saída.
 
         Antes ela mostrava só o último trabalho. Com uma fila de cinco
-        arquivos, os quatro primeiros ficavam invisíveis — só indo na pasta de
-        saída — e a página não dizia sequer de qual arquivo era o texto na
+        arquivos, os quatro primeiros ficavam invisíveis, e a página não dizia
+        sequer de qual arquivo era o texto na tela.
+
+        As abas ficam numa área que rola: a pasta de saída pode ter dezenas de
+        transcrições, e todas têm de caber — sem empurrar o texto para fora da
         tela.
         """
         card = RoundedCard(self.content, padding=12, radius=16)
         self._cards.append(card)
         self.tab_plain = card
 
-        self.transcript_tabs = tk.Frame(card.body, background=self.theme.paper)
-        self.transcript_tabs.pack(fill="x", pady=(0, 8))
+        moldura = tk.Frame(card.body, background=self.theme.paper)
+        moldura.pack(fill="x", pady=(0, 8))
+        moldura.columnconfigure(0, weight=1)
+        self._panels.append(moldura)
+
+        self.transcript_canvas = tk.Canvas(
+            moldura, height=TAB_ROW_HEIGHT, highlightthickness=0, borderwidth=0,
+            background=self.theme.paper,
+        )
+        self.transcript_canvas.grid(row=0, column=0, sticky="ew")
+        self.transcript_tabs = tk.Frame(
+            self.transcript_canvas, background=self.theme.paper
+        )
+        self.transcript_canvas.create_window(
+            (0, 0), window=self.transcript_tabs, anchor="nw", tags="abas"
+        )
+        self.transcript_tabs.bind("<Configure>", self._on_tabs_resized)
         self._panels.append(self.transcript_tabs)
+
+        self.transcript_scroll = RoundedScrollbar(
+            moldura, orient="vertical", command=self.transcript_canvas.yview,
+            background=self.theme.paper,
+        )
+        self.transcript_scroll.grid(row=0, column=1, sticky="ns")
+        self._scrollbars.append(self.transcript_scroll)
+        self.transcript_canvas.configure(yscrollcommand=self.transcript_scroll.set)
+
         self.transcript_buttons: dict[str, TabButton] = {}
 
         self.transcript_label = ttk.Label(
@@ -1203,23 +1252,47 @@ class LaudaApp:
         self.nav.add(card, "Transcrição", "transcript")
 
     def _transcript_entries(self) -> list[history.HistoryEntry]:
-        """Os trabalhos com texto corrido ainda em disco, do mais novo ao mais velho.
+        """Tudo que está transcrito **na pasta de saída**, do mais novo ao mais velho.
 
-        Arquivo apagado ou pasta movida some da lista: aba que abre o vazio é
-        pior que aba nenhuma.
+        A fonte é a pasta, não o histórico: quem já tinha cinco transcrições
+        ali não veria nenhuma delas, porque o histórico só conhece o que este
+        aplicativo processou — e só desde a versão que passou a guardar o
+        caminho do texto. A pasta é o que o usuário enxerga no Explorador, e é
+        com ela que as abas têm de bater.
+
+        O histórico ainda serve para enfeitar: dele vêm o nome do arquivo de
+        origem, a duração e o modelo, quando aquele trabalho passou por aqui.
         """
-        vistos: set[str] = set()
+        pasta = Path(self.folder_var.get().strip() or str(PROJECT_ROOT / "saida"))
+        try:
+            arquivos = sorted(
+                pasta.glob("*.transcript.txt"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+        except OSError:  # pragma: no cover - pasta some entre o glob e o stat
+            return []
+
+        por_caminho = {
+            entrada.transcript_path: entrada
+            for entrada in history.load()
+            if entrada.transcript_path
+        }
+
         entradas: list[history.HistoryEntry] = []
-        for entrada in reversed(history.load()):
-            caminho = entrada.transcript_path
-            if not caminho or caminho in vistos:
-                continue
-            if not Path(caminho).exists():
-                continue
-            vistos.add(caminho)
-            entradas.append(entrada)
-            if len(entradas) >= TRANSCRIPT_TABS:
-                break
+        for arquivo in arquivos:
+            conhecido = por_caminho.get(str(arquivo))
+            if conhecido is not None:
+                entradas.append(conhecido)
+            else:
+                # Transcrição que este aplicativo não processou (ou processou
+                # antes de guardar o caminho): o nome sai do próprio arquivo.
+                laudo = arquivo.with_name(arquivo.name[: -len(".transcript.txt")] + ".report.txt")
+                entradas.append(history.HistoryEntry(
+                    file_name=arquivo.name[: -len(".transcript.txt")],
+                    transcript_path=str(arquivo),
+                    report_path=str(laudo) if laudo.exists() else "",
+                ))
         return entradas
 
     def _refresh_transcript_tabs(self, selecionar: str | None = None) -> None:
@@ -1246,8 +1319,8 @@ class LaudaApp:
         if atual not in {e.transcript_path for e in entradas}:
             atual = entradas[0].transcript_path
 
-        # Três por linha: nome de arquivo é comprido, e duas linhas de abas
-        # ainda cabem sem empurrar o texto para fora da tela.
+        # Três por linha: nome de arquivo é comprido. Passando de três linhas,
+        # a área rola em vez de crescer.
         for indice, entrada in enumerate(entradas):
             botao = TabButton(
                 self.transcript_tabs,
@@ -1256,8 +1329,11 @@ class LaudaApp:
                 command=self._transcript_command(entrada.transcript_path),
                 parent_bg=self.theme.paper,
             )
-            botao.grid(row=indice // 3, column=indice % 3, sticky="w",
-                       padx=(0, 6), pady=(0, 4))
+            botao.grid(
+                row=indice // TRANSCRIPT_COLUMNS,
+                column=indice % TRANSCRIPT_COLUMNS,
+                sticky="w", padx=(0, 6), pady=(0, 4),
+            )
             botao.apply_theme(
                 fill_on=mix(self.theme.paper, self.theme.accent, 0.16),
                 fill_off=self.theme.paper,
@@ -1269,6 +1345,16 @@ class LaudaApp:
             self.transcript_buttons[entrada.transcript_path] = botao
 
         self.show_transcript(atual)
+
+    def _on_tabs_resized(self, _event: tk.Event) -> None:
+        """A área das abas cresce até três linhas; daí em diante ela rola."""
+        self.transcript_canvas.configure(
+            scrollregion=self.transcript_canvas.bbox("all")
+        )
+        pedido = self.transcript_tabs.winfo_reqheight()
+        self.transcript_canvas.configure(
+            height=max(TAB_ROW_HEIGHT, min(pedido, TAB_ROW_HEIGHT * TAB_MAX_ROWS))
+        )
 
     def _transcript_command(self, caminho: str) -> Callable[[], None]:
         return lambda: self.show_transcript(caminho)
@@ -2402,6 +2488,10 @@ class LaudaApp:
         self.cancel_event.clear()
         self.recovery_messages.clear()
         self.go_button.configure(state="disabled", text="Processando...")
+        self.pause_event.clear()
+        self._paused_at = None
+        self._paused_seconds = 0.0
+        self.pause_button.configure(state="normal", text="Pausar")
         self.stepper.set_current(1)
         self._set_state("Trabalhando", self.theme.accent)
         self._last_stage = None
@@ -2455,7 +2545,8 @@ class LaudaApp:
 
         try:
             result, attempts = run_with_recovery(
-                options, progress=report, on_event=event, cancel=self.cancel_event
+                options, progress=report, on_event=event,
+                cancel=self.cancel_event, pause=self.pause_event,
             )
             if len(attempts) > 1:
                 result.partial_failures.append(
@@ -2525,7 +2616,11 @@ class LaudaApp:
         """
         if self._job_started is None or fraction < 0.08 or fraction >= 1.0:
             return None
-        decorrido = time.monotonic() - self._job_started
+        # O tempo parado nao conta: senao, pausar dez minutos faria a
+        # estimativa prometer o dobro do que falta.
+        decorrido = time.monotonic() - self._job_started - self._paused_seconds
+        if self._paused_at is not None:
+            decorrido -= time.monotonic() - self._paused_at
         if decorrido <= 0:
             return None
         return max(0.0, decorrido / fraction - decorrido)
@@ -2753,6 +2848,7 @@ class LaudaApp:
         self.stepper.set_note("")
         self._eta_seconds = None
         self.go_button.configure(state="normal", text="Processar")
+        self._clear_pause()
 
         report_path = result.outputs.get("report.txt")
         if report_path and Path(report_path).exists():
@@ -2886,6 +2982,7 @@ class LaudaApp:
         self.stepper.set_note("")
         self._eta_seconds = None
         self.go_button.configure(state="normal", text="Processar")
+        self._clear_pause()
         self._set_state("Erro", self.theme.danger)
         self.status_label.configure(
             text="Não deu certo. Veja a mensagem.", foreground=self.theme.danger
@@ -2912,6 +3009,49 @@ class LaudaApp:
                 subprocess.Popen(["xdg-open", str(path)])
         except Exception as exc:  # pragma: no cover - ambiente sem shell gráfico
             messagebox.showerror(APP_NAME, f"Não consegui abrir:\n{path}\n\n{exc}")
+
+    # ------------------------------------------------------------- pausar --
+    def _clear_pause(self) -> None:
+        """Devolve o botão ao repouso quando o trabalho acaba (ou falha)."""
+        self.pause_event.clear()
+        self._paused_at = None
+        self.pause_button.configure(state="disabled", text="Pausar")
+
+    def toggle_pause(self) -> None:
+        """Congela ou descongela o processamento em andamento.
+
+        Pausar não é cancelar nem salvar: o processo filho fica parado onde
+        está, com o modelo carregado, e volta exatamente do mesmo ponto. O
+        preço é a memória, que continua ocupada. Para devolver a máquina de
+        verdade, o caminho é fechar — e aí o ponto de retomada assume.
+        """
+        if not (self.worker and self.worker.is_alive()):
+            return
+
+        if self.pause_event.is_set():
+            self.pause_event.clear()
+            if self._paused_at is not None:
+                self._paused_seconds += time.monotonic() - self._paused_at
+                self._paused_at = None
+            self.pause_button.configure(text="Pausar")
+            self._set_state("Trabalhando", self.theme.accent)
+            self.stepper.set_note("")
+            self.status_label.configure(
+                text="Retomado de onde parou.", foreground=self.theme.ink_soft
+            )
+            log.info("Processamento retomado pelo usuário.")
+        else:
+            self.pause_event.set()
+            self._paused_at = time.monotonic()
+            self.pause_button.configure(text="Retomar")
+            self._set_state("Pausado", self.theme.accent_warm)
+            self.stepper.set_note("pausado")
+            self.status_label.configure(
+                text="Pausado. O trabalho continua na memória e retoma do mesmo "
+                "ponto — fechar o aplicativo agora perde a etapa em andamento.",
+                foreground=self.theme.accent_warm,
+            )
+            log.info("Processamento pausado pelo usuário.")
 
     def _reveal_in_folder(self, path: Path) -> None:
         """Abre a pasta com o arquivo **selecionado**, pronto para copiar.

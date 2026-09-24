@@ -338,6 +338,13 @@ def section_interface() -> list:
                  "não começou, sem interromper o que está rodando. A fila inteira "
                  "roda com as opções de quando você clicou em Processar: mexer num "
                  "interruptor no meio não muda os arquivos que ainda estão esperando."],
+                ["Pausar",
+                 "Com o trabalho em andamento, aparece ao lado de Processar.",
+                 "Congela o processamento onde está: o uso de processador cai a zero e "
+                 "o trabalho volta do mesmo ponto quando você clicar em <b>Retomar</b>. "
+                 "A memória continua ocupada — pausar devolve o processador, não a RAM. "
+                 "Fechar o aplicativo pausado perde a etapa em andamento, mas não o que "
+                 "já foi transcrito."],
                 ["Rodapé",
                  "O botão <b>Processar</b> e a trilha de cinco etapas.",
                  "A trilha acende conforme o trabalho anda: Arquivo, Pré-processamento, "
@@ -405,9 +412,10 @@ def section_interface() -> list:
             "<b>Relatório</b> — durante o trabalho mostra o <b>registro ao vivo</b>: "
             "arquivo, modelo, device e cada etapa, conforme acontecem. Quando termina, "
             "passa a mostrar o laudo completo, já formatado.",
-            "<b>Transcrição</b> — o texto corrido, com <b>uma aba por arquivo</b> "
-            "já transcrito, nomeada com o arquivo de origem. Processou cinco de uma "
-            "vez? As cinco ficam a um clique. Embaixo do texto, três botões: "
+            "<b>Transcrição</b> — o texto corrido, com <b>uma aba para cada "
+            "transcrição que existe na pasta de saída</b> — inclusive as de outro "
+            "dia, feitas antes. Trocou a pasta, trocam as abas. Embaixo do texto, "
+            "três botões: "
             "<b>Abrir o local do arquivo</b> (a pasta de saída abre com o .txt já "
             "selecionado, pronto para copiar), <b>Copiar o texto</b> e <b>Abrir o "
             "laudo deste arquivo</b>. Acima do texto, o nome do arquivo, a duração, "

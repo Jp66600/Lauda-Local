@@ -1,4 +1,4 @@
-LAUDA LOCAL — versão de teste 0.11.0-beta
+LAUDA LOCAL — versão de teste 0.12.0-beta
 =========================================
 
 O que é
@@ -10,9 +10,9 @@ você quiser, quem falou o quê e legendas .srt/.vtt.
 Tudo acontece no seu computador. Nenhum byte do seu arquivo é enviado para
 lugar nenhum, e não há nenhuma conta ou API paga envolvida.
 
-Este programa se chamava MediaIntel Local. Só o nome mudou: se você testou a
-versão anterior, suas escolhas e seu histórico vêm junto na primeira abertura,
-e a pasta antiga continua onde estava.
+Este programa já se chamou MediaIntel Local e Vellum. Só o nome mudou: se você
+testou alguma dessas versões, suas escolhas e seu histórico vêm junto na
+primeira abertura, e a pasta antiga continua onde estava.
 
 
 Como usar
@@ -39,6 +39,39 @@ Se um arquivo der erro no meio da fila, os outros continuam.
 
 A fila inteira usa as opções de quando você clicou em Processar. Mexer num
 interruptor no meio não muda os arquivos que ainda estão esperando.
+
+
+Precisa do computador agora? Pause
+----------------------------------
+Com um trabalho em andamento, o botão "Pausar" fica ao lado de "Processar". Ele
+congela o processamento onde está: o uso de processador cai para zero e o
+trabalho continua exatamente do mesmo ponto quando você clicar em "Retomar".
+
+Duas ressalvas honestas:
+
+    A memória continua ocupada. Pausar devolve o processador, não a RAM.
+    Fechar o programa pausado perde a etapa em andamento — mas não o que já
+    foi transcrito, que fica no ponto de retomada.
+
+Para desligar o computador de verdade no meio de um trabalho, o melhor é
+fechar mesmo: quando você abrir de novo e mandar processar o MESMO arquivo com
+as MESMAS opções, ele pula tudo que já estava pronto.
+
+
+A página "Transcrição"
+----------------------
+Ela mostra uma aba para cada transcrição que existe na sua pasta de saída —
+inclusive as de antes, feitas em outro dia. Clique na aba para ler aquele
+texto. Acima dele aparecem o nome do arquivo, a duração e o caminho completo.
+
+Embaixo, três botões:
+
+    Abrir o local do arquivo   abre a pasta com o .txt já selecionado,
+                               pronto para copiar ou arrastar
+    Copiar o texto             manda tudo para a área de transferência
+    Abrir o laudo              o relatório completo daquele mesmo arquivo
+
+Trocou a pasta de saída? As abas acompanham.
 
 
 A página "Arquivos"

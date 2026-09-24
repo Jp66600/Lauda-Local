@@ -1638,11 +1638,14 @@ def test_o_tamanho_da_legenda_fica_guardado(app, tmp_path: Path):
 
 # ------------------------------------------- página Transcrição (abas) ----
 def _trabalho(app, tmp_path: Path, nome: str, texto: str = "conteudo"):
-    """Simula um trabalho terminado, com o .transcript.txt de verdade em disco."""
+    """Simula um trabalho terminado, com o .transcript.txt de verdade em disco.
+
+    Grava na pasta de saída do app, que é de onde as abas saem.
+    """
     from tests_helpers import make_result
 
-    saida = tmp_path / "saida"
-    saida.mkdir(exist_ok=True)
+    saida = Path(app.folder_var.get())
+    saida.mkdir(parents=True, exist_ok=True)
     resultado = make_result(texto)
     resultado.source.path = f"C:/videos/{nome}"
     resultado.source.name = nome
@@ -1655,7 +1658,12 @@ def _trabalho(app, tmp_path: Path, nome: str, texto: str = "conteudo"):
     return transcricao
 
 
-def test_sem_trabalho_a_transcricao_convida_e_trava_os_botoes(app):
+def test_pasta_sem_transcricao_convida_e_trava_os_botoes(app, tmp_path: Path):
+    vazia = tmp_path / "vazia"
+    vazia.mkdir()
+    app.folder_var.set(str(vazia))
+    app._refresh_transcript_tabs()
+
     assert "aparece aqui depois de processar" in app.text_plain.get("1.0", "end-1c")
     assert app.transcript_buttons == {}
     assert str(app.button_transcript_folder["state"]) == "disabled"
@@ -1701,15 +1709,45 @@ def test_a_aba_diz_o_nome_do_arquivo_e_onde_ele_esta(app, tmp_path: Path):
     assert str(caminho) in legenda, "o caminho completo evita ter de caçar na pasta"
 
 
-def test_a_pagina_nao_passa_do_limite_de_abas(app, tmp_path: Path):
-    from lauda.desktop import TRANSCRIPT_TABS
+def test_nenhuma_transcricao_fica_escondida(app, tmp_path: Path):
+    """A pasta pode ter dezenas; todas viram aba, e a área rola."""
+    from lauda.desktop import TAB_MAX_ROWS, TAB_ROW_HEIGHT
 
-    for indice in range(TRANSCRIPT_TABS + 3):
+    for indice in range(11):
         _trabalho(app, tmp_path, f"arquivo{indice}.mp4", f"texto {indice}")
 
-    assert len(app.transcript_buttons) == TRANSCRIPT_TABS
-    rotulos = [b._text for b in app.transcript_buttons.values()]
-    assert rotulos[0] == f"arquivo{TRANSCRIPT_TABS + 2}.mp4", "o mais novo encabeça"
+    assert len(app.transcript_buttons) == 11
+    app.root.update_idletasks()
+    altura = int(app.transcript_canvas.cget("height"))
+    assert altura <= TAB_ROW_HEIGHT * TAB_MAX_ROWS, "a área não cresce sem limite"
+
+
+def test_transcricao_que_ja_estava_na_pasta_vira_aba(app, tmp_path: Path):
+    """O caso do usuário: cinco transcrições na pasta, nenhuma feita nesta sessão."""
+    saida = Path(app.folder_var.get())
+    saida.mkdir(parents=True, exist_ok=True)
+    for nome in ("Reuniao-11-09-26-Ditel", "Gravacao_de_Tela_2026-09-11"):
+        (saida / f"{nome}.transcript.txt").write_text(f"texto de {nome}", encoding="utf-8")
+
+    app._refresh_transcript_tabs()
+
+    rotulos = sorted(b._text for b in app.transcript_buttons.values())
+    assert len(rotulos) == 2
+    assert any("Ditel" in r for r in rotulos), "o nome sai do próprio arquivo"
+    assert "texto de " in app.text_plain.get("1.0", "end-1c")
+
+
+def test_trocar_a_pasta_de_saida_troca_as_abas(app, tmp_path: Path):
+    _trabalho(app, tmp_path, "antigo.mp4", "texto antigo")
+    outra = tmp_path / "outra-pasta"
+    outra.mkdir()
+    (outra / "novo.transcript.txt").write_text("texto novo", encoding="utf-8")
+
+    app.folder_var.set(str(outra))
+    app._refresh_transcript_tabs()
+
+    assert [b._text for b in app.transcript_buttons.values()] == ["novo"]
+    assert "texto novo" in app.text_plain.get("1.0", "end-1c")
 
 
 def test_transcricao_apagada_do_disco_perde_a_aba(app, tmp_path: Path):
@@ -1753,3 +1791,77 @@ def test_copiar_leva_a_transcricao_mostrada(app, tmp_path: Path):
     app.copy_transcript()
 
     assert "texto do segundo" in app.root.clipboard_get()
+
+
+# ------------------------------------------------------ pausar e retomar --
+def test_sem_trabalho_o_botao_de_pausa_fica_travado(app):
+    assert str(app.pause_button["state"]) == "disabled"
+    assert app.pause_button._text == "Pausar"
+
+
+def test_pausar_liga_o_evento_e_troca_o_rotulo(app, silent_video: Path):
+    app._accept_file(silent_video)
+    app.worker = types.SimpleNamespace(is_alive=lambda: True)
+    app.pause_button.configure(state="normal")
+
+    app.toggle_pause()
+
+    assert app.pause_event.is_set()
+    assert app.pause_button._text == "Retomar"
+    assert "Pausado" in app.state_label.cget("text")
+    assert "retoma do mesmo" in app.status_label.cget("text")
+    app.worker = None
+
+
+def test_retomar_desliga_o_evento(app, silent_video: Path):
+    app._accept_file(silent_video)
+    app.worker = types.SimpleNamespace(is_alive=lambda: True)
+    app.pause_button.configure(state="normal")
+
+    app.toggle_pause()
+    app.toggle_pause()
+
+    assert not app.pause_event.is_set()
+    assert app.pause_button._text == "Pausar"
+    assert "Retomado" in app.status_label.cget("text")
+    app.worker = None
+
+
+def test_sem_trabalho_rodando_o_botao_nao_faz_nada(app):
+    app.toggle_pause()
+
+    assert not app.pause_event.is_set(), "pausar o nada não pode armar o evento"
+
+
+def test_o_tempo_parado_nao_entra_na_estimativa(app, monkeypatch):
+    """Pausar dez minutos não pode dobrar o tempo que falta."""
+    import time as _time
+
+    agora = [1000.0]
+    monkeypatch.setattr(_time, "monotonic", lambda: agora[0])
+    app._job_started = agora[0]
+
+    agora[0] += 100.0                      # 100 s de trabalho de verdade
+    sem_pausa = app._estimate_remaining(0.5)
+
+    app._paused_seconds = 600.0            # e dez minutos parado
+    agora[0] += 600.0
+    com_pausa = app._estimate_remaining(0.5)
+
+    assert sem_pausa == pytest.approx(100.0)
+    assert com_pausa == pytest.approx(sem_pausa), "o tempo parado é descontado"
+
+
+def test_terminar_devolve_o_botao_ao_repouso(app, tmp_path: Path):
+    from tests_helpers import make_result
+
+    app.worker = types.SimpleNamespace(is_alive=lambda: True)
+    app.pause_button.configure(state="normal")
+    app.toggle_pause()
+    app.worker = None
+
+    app._on_done(make_result())
+
+    assert not app.pause_event.is_set()
+    assert str(app.pause_button["state"]) == "disabled"
+    assert app.pause_button._text == "Pausar"
