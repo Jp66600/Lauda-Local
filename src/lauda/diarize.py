@@ -254,6 +254,25 @@ def _agglomerative(
     return labels
 
 
+def _limit_torch_threads(options: JobOptions) -> None:
+    """Faz o limite de CPU valer também para o torch.
+
+    Sem isto o controle de CPU da página Desempenho valia só para a
+    transcrição: o torch abria uma thread por thread lógica e comia a máquina
+    inteira na etapa de quem fala — justamente a etapa mais longa de quem não
+    tem placa NVIDIA e roda tudo no processador.
+    """
+    import torch
+
+    threads = options.limits.cpu_threads()
+    try:
+        torch.set_num_threads(threads)
+    except Exception as exc:  # pragma: no cover - build de torch sem OpenMP
+        log.debug("Não consegui limitar as threads do torch: %s", exc)
+        return
+    log.debug("torch limitado a %d thread(s) na diarização.", threads)
+
+
 def _run_ecapa(
     wav_path: Path,
     options: JobOptions,
@@ -273,6 +292,8 @@ def _run_ecapa(
 
     audio, rate = _read_wav_mono(wav_path)
     device = "cuda" if (torch.cuda.is_available() and options.device != "cpu") else "cpu"
+    if device == "cpu":
+        _limit_torch_threads(options)
     savedir = options.models_dir / "speechbrain" / "spkrec-ecapa-voxceleb"
     savedir.mkdir(parents=True, exist_ok=True)
 

@@ -1,4 +1,4 @@
-LAUDA LOCAL — versão de teste 0.15.0-beta
+LAUDA LOCAL — versão de teste 0.16.0-beta
 =========================================
 
 O que é
@@ -145,8 +145,30 @@ Quem quiser afinar, a aba "Limites" tem os quatro controles separados. Em
 "Qualidade", na página do trabalho, "Rascunho" é bem mais rápido que
 "Recomendado" — bom para testar antes de rodar um arquivo longo.
 
-Quem tem placa de vídeo NVIDIA pode acelerar bastante, mas o suporte a GPU não
-vem neste pacote (ele dobraria de tamanho). Me avise se quiser essa versão.
+Sobre a placa de vídeo
+----------------------
+A aba "Diagnóstico" da página Desempenho diz o nome da sua placa e se ela vai
+ser usada. São quatro respostas possíveis, e só uma delas pede conserto:
+
+  placa NVIDIA, com a memória ao lado
+      Nada a fazer: a transcrição já usa a placa.
+
+  placa NVIDIA e "não está sendo usada"
+      Este vale a pena consertar. Atualize o driver pelo aplicativo da NVIDIA.
+      (Neste pacote o suporte a GPU não vem junto: ele dobraria de tamanho.
+      Me avise se quiser a versão com GPU.)
+
+  placa AMD, Intel ou integrada
+      Nada a fazer. O motor de transcrição só acelera em NVIDIA, e não existe
+      caminho para as outras. Não é defeito de instalação nem driver faltando:
+      o processador é o caminho mais rápido que a sua máquina tem, e é o que
+      vai ser usado.
+
+  "nenhuma identificada"
+      É o caso mais comum. Funciona, só demora mais.
+
+Rodando no processador, o que muda a velocidade é a "Qualidade" na página do
+trabalho: "Rascunho" é bem mais rápido que "Recomendado".
 
 
 O que eu gostaria de saber de você

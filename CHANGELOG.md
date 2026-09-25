@@ -2,6 +2,48 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.16.0-beta] — 2026-09-25
+
+### Adicionado
+
+- **Identificação do fabricante da placa de vídeo** (`gpus.py`): NVIDIA, AMD,
+  Intel, Apple, integrada ou dedicada, pelo identificador do fabricante no
+  barramento PCI — registro no Windows, `/sys` no Linux, sem abrir subprocesso.
+  É a única fonte que continua certa quando o driver certo não está instalado.
+  Adaptador de área de trabalho remota e de máquina virtual não contam como
+  placa.
+- O `lauda doctor` lista uma linha por adaptador, dizendo se ele acelera a
+  transcrição.
+
+### Mudado
+
+- **O programa passou a distinguir quatro situações de placa de vídeo**, que
+  antes saíam todas como "nenhuma GPU CUDA detectada": não ter placa; ter uma
+  de outro fabricante; ter uma NVIDIA que o CTranslate2 não consegue abrir; e
+  ter uma NVIDIA funcionando. Só a terceira pede conserto, e agora ela diz
+  qual: driver ou cuDNN. Quem tem uma Radeon lia a mensagem antiga como driver
+  quebrado e ia atrás de um defeito que não existe.
+- **A transcrição na CPU ficou ~13% mais rápida.** O limite de CPU passou a
+  contar **núcleos físicos** em vez de threads lógicas: as duas threads de um
+  mesmo núcleo disputam a unidade de cálculo que as multiplicações de matriz já
+  saturam sozinhas. Medido num Ryzen 5 5600X (6 núcleos, 12 threads), 4 minutos
+  de áudio com o modelo `small`, saída idêntica nas quatro rodadas — 12 threads:
+  29,9 s e 26,6 s; 6 núcleos: 24,8 s e 24,2 s. "CPU 100%" agora significa 6
+  aqui, não 12.
+- **O limite de CPU passou a valer também para a diarização.** O torch abria
+  uma thread por thread lógica e comia a máquina inteira na etapa de quem fala
+  — justamente a mais longa de quem roda tudo no processador.
+- O diagnóstico mostra o **nome comercial do processador** ("AMD Ryzen 5 5600X")
+  em vez de "AMD64 Family 25 Model 33 Stepping 0", e nota o processador pelos
+  núcleos físicos.
+
+### Corrigido
+
+- **No aplicativo instalado, a VRAM da placa não era lida.** O nome e a memória
+  da GPU vinham só do `nvidia-smi`, que não está no PATH do pacote; sem eles o
+  orçamento de VRAM ficava indefinido e o modelo era escolhido sem conferir se
+  cabia na placa. Agora, quando o `nvidia-smi` falta, os dois vêm do registro.
+
 ## [0.15.0-beta] — 2026-09-24
 
 ### Corrigido

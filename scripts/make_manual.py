@@ -490,6 +490,44 @@ def section_interface() -> list:
             "ali mesmo, com a porcentagem e os gigabytes na tela — são cerca de 9 GB, "
             "e uma barra parada por vinte minutos seria indistinguível de travamento."
         ),
+        heading("Sua placa de vídeo vai ser usada?", "h2"),
+        para(
+            "Depende do fabricante, e o programa diz qual é o seu caso na aba "
+            "<b>Diagnóstico</b> da página Desempenho. O motor de transcrição só sabe "
+            "dois caminhos: o processador e as placas <b>NVIDIA</b>. São quatro "
+            "situações, e só uma delas pede conserto:"
+        ),
+        Spacer(1, 2 * mm),
+        grid(
+            ["O que o diagnóstico mostra", "O que fazer"],
+            [
+                ["Uma placa NVIDIA, com a memória ao lado",
+                 "Nada. A transcrição já está rodando nela, que é o caminho mais "
+                 "rápido."],
+                ["Uma placa NVIDIA e “não está sendo usada”",
+                 "<b>Este vale a pena consertar.</b> Atualize o driver pelo "
+                 "aplicativo da NVIDIA; se continuar, o que falta é o cuDNN. "
+                 "Resolvido, a transcrição fica várias vezes mais rápida."],
+                ["Uma placa AMD, Intel ou integrada",
+                 "Nada a fazer. Elas não têm caminho CUDA, e o motor não tem outro. "
+                 "Não é defeito de instalação nem driver faltando: o processador é o "
+                 "caminho mais rápido que a máquina tem, e é o que vai ser usado."],
+                ["“Nenhuma identificada”",
+                 "Nada. É o caso mais comum, e funciona — só demora mais que numa "
+                 "NVIDIA."],
+            ],
+            widths=[62 * mm, 108 * mm],
+            mono_columns=(),
+            strong_columns=(0,),
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "Se a sua placa cai no terceiro caso, o controle de <b>processador</b> na "
+            "aba Limites é o que muda a velocidade — e ele já vem no máximo. O número "
+            "que ele mostra é de <b>núcleos</b>, não de threads: usar as duas threads "
+            "de cada núcleo deixa a transcrição mais lenta, não mais rápida, porque "
+            "elas disputam a mesma unidade de cálculo. Medido, 13% mais lenta."
+        ),
         heading("Quanto tempo ainda falta", "h2"),
         para(
             "A partir de 8% do trabalho, o aplicativo passa a estimar o que falta pelo "

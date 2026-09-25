@@ -45,7 +45,7 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 |---|---|---|
 | [Guia rápido](docs/Lauda-Local-Guia-Rapido.pdf) | 4 | quem só quer transcrever um arquivo hoje |
 | [Manual completo](docs/Lauda-Local-Manual.pdf) | 19 | cada tela, cada opção e o que fazer quando dá errado |
-| [Decisões técnicas](docs/Lauda-Local-Decisoes-Tecnicas.pdf) | 16 | o porquê de cada escolha, as medições e os limites assumidos |
+| [Decisões técnicas](docs/Lauda-Local-Decisoes-Tecnicas.pdf) | 17 | o porquê de cada escolha, as medições e os limites assumidos |
 | [Front-end](docs/Lauda-Local-Front-End.pdf) | 17 | como a interface foi construída e como pedir mudanças nela |
 
 ---
@@ -53,6 +53,14 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 ## O que há de novo
 
 A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
+
+**0.16.0-beta**
+- **O programa identifica o fabricante da placa de vídeo** — NVIDIA, AMD, Intel
+  ou integrada — e diz se ela vai ser usada, e por que não. Antes as três
+  situações saíam como "nenhuma GPU CUDA", e quem tinha uma Radeon ia atrás de
+  um defeito que não existe.
+- **A transcrição na CPU ficou ~13% mais rápida**: o motor passou a contar
+  núcleos físicos em vez de threads lógicas.
 
 **0.15.0-beta**
 - **A legenda `.srt` sai por padrão.** Ela é o `[BLOCO B]` do laudo noutro
@@ -126,7 +134,8 @@ sozinho.
 - Gera timestamps por segmento — e por palavra, se você pedir.
 - Identifica quem fala (**diarização**), com backend que dispensa token do Hugging Face.
 - Escreve `report.txt`, `transcript.txt`, `data.json` e `.srt` — e o `.vtt`, se você pedir.
-- Escolhe sozinho device/modelo conforme sua GPU/RAM e **cai para CPU** se a GPU falhar.
+- Identifica a placa de vídeo (NVIDIA, AMD, Intel ou integrada), escolhe sozinho
+  device/modelo conforme ela e a RAM, e **cai para CPU** se a GPU falhar.
 - Tem CLI e **aplicativo em janela própria**, com modo claro e escuro.
 - Deixa você **limitar quanto da máquina** ele pode usar (CPU, RAM, GPU, VRAM).
 - **Retoma de onde parou** se travar ou for interrompido, sem transcrever de novo.
@@ -153,6 +162,12 @@ sozinho.
 | Python | 3.11 – 3.13 (**3.12 recomendado**) | sim |
 | ffmpeg + ffprobe | 6 ou superior, no PATH | sim |
 | GPU NVIDIA | CUDA 12 + cuDNN 9 | não (acelera muito) |
+
+> **Placa AMD ou Intel?** Funciona, mas no processador. O motor de transcrição
+> (CTranslate2) só tem dois caminhos, `cpu` e `cuda` — não existe ROCm nem
+> DirectML nele. O programa reconhece a sua placa, diz na página Desempenho que
+> ela não entra no trabalho e tira o melhor do processador. Veja
+> [Placa de vídeo: quem acelera e quem não](#placa-de-vídeo-quem-acelera-e-quem-não).
 
 > **Python 3.14 ainda não funciona**: `ctranslate2` não publica wheels para essa
 > versão. Use 3.12.
@@ -695,6 +710,53 @@ docker run --rm -v "$PWD/midia:/data:ro" -v "$PWD/saida:/saida" -v "$PWD/models:
 A imagem é CPU-only e já traz o ffmpeg. Os modelos ficam num volume, então a
 imagem não carrega pesos. Para GPU, troque a base por
 `nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04` e rode com `--gpus all`.
+
+---
+
+## Placa de vídeo: quem acelera e quem não
+
+O motor de transcrição é o **CTranslate2**, e ele tem exatamente dois caminhos:
+`cpu` e `cuda`. Dá para conferir na sua instalação:
+
+```bash
+python -c "import ctranslate2 as c; print(c.get_supported_compute_types('cpu'))"
+```
+
+Não existe ROCm, DirectML nem Metal nessa lista. Na prática:
+
+| A sua placa | Acelera? | O que o programa faz |
+|---|---|---|
+| **NVIDIA** com driver e cuDNN em dia | sim | usa a placa; é o caminho mais rápido |
+| **NVIDIA** sem cuDNN / driver antigo | não, mas dá para consertar | avisa, diz o que falta e roda no processador |
+| **AMD** (Radeon, RX, APU) | não | reconhece a placa, avisa que ela não entra, e tira o melhor do processador |
+| **Intel** (UHD, Iris, Arc) | não | idem |
+| **Apple Silicon** | não | idem |
+| nenhuma identificada | não | roda no processador |
+
+A página **Desempenho → Diagnóstico** diz em qual linha você está, pelo nome da
+sua placa. Ter uma Radeon **não** é defeito de instalação e não há driver
+faltando: só não existe o caminho.
+
+### Então o que dá para fazer numa máquina sem NVIDIA
+
+O que muda a velocidade é o processador, e o programa já o usa do melhor jeito:
+
+- a conta do limite de CPU é sobre **núcleos físicos**, não threads lógicas — as
+  duas threads de um núcleo disputam a mesma unidade de cálculo, e usar todas
+  deixa a transcrição ~13% **mais lenta** (medido; está nas *Decisões técnicas*);
+- o modelo é carregado em `int8`, que é o formato mais rápido do CTranslate2 em
+  CPU;
+- o limite de CPU vale também para a etapa de quem fala.
+
+Se ainda estiver devagar, o que sobra é escolher um modelo menor na qualidade
+(`small` em vez de `large-v3`) — é o que mais muda o tempo.
+
+### E se um dia der para acelerar em AMD
+
+Precisaria de um **segundo motor de inferência**: `whisper.cpp` (que tem Vulkan
+e ROCm) ou ONNX Runtime com DirectML. Não é configuração — é outro modelo,
+outro formato de arquivo e outro caminho de código para manter. Se isso te
+interessa, [abra uma issue](https://github.com/Jp66600/Lauda-Local/issues).
 
 ---
 

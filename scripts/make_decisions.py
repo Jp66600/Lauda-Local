@@ -343,6 +343,72 @@ def build() -> Path:
             "explicação decente.",
             AMBER,
         ),
+        h("AMD, Intel e a placa que não é usada", "h2"),
+        para(
+            "O CTranslate2 tem exatamente dois caminhos: "
+            "<font face='" + MONO + "'>cpu</font> e "
+            "<font face='" + MONO + "'>cuda</font>. Não há ROCm, não há DirectML, não "
+            "há Metal — dá para conferir chamando "
+            "<font face='" + MONO + "'>get_supported_compute_types</font>. Uma Radeon "
+            "ou uma Intel, por mais nova que seja, não acelera a transcrição."
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "Esse fato não era o problema. O problema era o programa não saber "
+            "diferenciar <b>três situações</b> que ele resumia todas como “nenhuma GPU "
+            "CUDA detectada”: não ter placa, ter uma placa de outro fabricante, e ter "
+            "a placa certa com o driver pela metade. Quem tinha uma RX 7800 XT lia "
+            "aquilo como driver quebrado e ia atrás de um conserto que não existe; "
+            "quem tinha uma GeForce com cuDNN faltando não descobria que o conserto "
+            "existia."
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "Por isso o programa enumera os adaptadores pelo identificador do "
+            "fabricante no barramento PCI — registro no Windows, "
+            "<font face='" + MONO + "'>/sys</font> no Linux, sem abrir subprocesso. É a "
+            "única fonte que continua certa quando o driver certo não está instalado. "
+            "Com ela, cada situação ganha a frase que leva à ação certa, e só uma "
+            "delas pede conserto."
+        ),
+        Spacer(1, 2 * mm),
+        note(
+            "O que faltaria para acelerar em AMD",
+            "Um segundo motor de inferência: whisper.cpp (que tem Vulkan e ROCm) ou "
+            "ONNX Runtime com DirectML. Não é configuração, é outro modelo, outro "
+            "formato de arquivo e outro caminho de código para manter. Enquanto isso "
+            "não existir, dizer a verdade e tirar o melhor do processador é o melhor "
+            "que dá para fazer — e é o que o programa faz.",
+            AMBER,
+        ),
+        h("Núcleos físicos, não threads lógicas", "h2"),
+        para(
+            "Quem não tem placa NVIDIA roda tudo no processador, e aí o número de "
+            "threads passa a ser a decisão de desempenho mais importante. A intuição "
+            "diz para usar todas. A medição diz o contrário: as duas threads de um "
+            "mesmo núcleo disputam a unidade de cálculo que as multiplicações de "
+            "matriz do modelo já saturam com uma thread só."
+        ),
+        Spacer(1, 2 * mm),
+        grid(
+            ["Threads", "4 min de áudio, modelo small", "x tempo real"],
+            [
+                ["12 (todas as lógicas)", "29,9 s / 26,6 s", "8,15x / 9,16x"],
+                ["<b>6 (os núcleos físicos)</b>", "<b>24,8 s / 24,2 s</b>",
+                 "<b>9,84x / 10,07x</b>"],
+            ],
+            widths=[52 * mm, 60 * mm, W - 112 * mm],
+            mono_columns=(),
+            strong_columns=(0,),
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "Duas medições de cada, num Ryzen 5 5600X de 6 núcleos e 12 threads, com o "
+            "mesmo áudio e a mesma saída (424 palavras nas quatro rodadas): <b>~13% "
+            "mais rápido usando metade das threads</b>. Por isso o controle de CPU da "
+            "página Desempenho conta núcleos físicos, e 100% significa 6 aqui, não 12."
+        ),
+        Spacer(1, 3 * mm),
         h("Bibliotecas CUDA instaladas via pip", "h2"),
         para(
             "O CTranslate2 procura cuBLAS e cuDNN no PATH do processo. Quando elas vêm "

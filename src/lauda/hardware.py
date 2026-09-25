@@ -19,7 +19,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from . import gpus as gpus_mod
 from .ffmpeg_tools import resolve_tools
+from .gpus import Gpu
 
 if TYPE_CHECKING:  # evita import circular em tempo de execução
     from .limits import ResourceLimits
@@ -70,16 +72,64 @@ class HardwareInfo:
     cpu_count: int
     ram_gb: float | None
     platform: str
+    #: Todos os adaptadores de vídeo, de qualquer fabricante. Vazio significa
+    #: "não consegui olhar", não "não tem placa".
+    gpus: tuple[Gpu, ...] = ()
+    #: Núcleos de verdade, sem contar as threads que cada um apresenta. `None`
+    #: quando o sistema não conta.
+    physical_cores: int | None = None
+
+    @property
+    def cores(self) -> int:
+        """Os núcleos que valem para o motor: físicos quando dá para saber."""
+        return self.physical_cores or self.cpu_count
+
+    @property
+    def graphics(self) -> Gpu | None:
+        """A placa mais relevante: a que acelera, ou a primeira dedicada."""
+        for gpu in self.gpus:
+            if gpu.accelerates_transcription:
+                return gpu
+        for gpu in self.gpus:
+            if gpu.integrated is False:
+                return gpu
+        return self.gpus[0] if self.gpus else None
+
+    @property
+    def gpu_situation(self) -> str:
+        """Por que a placa vai ou não ser usada. É a frase que o usuário lê.
+
+        As três respostas são diferentes e levam a ações diferentes: não ter
+        placa, ter uma que o motor não usa, e ter a certa com o driver pela
+        metade. Antes as três saíam como "nenhuma GPU CUDA", e quem tinha uma
+        Radeon ia atrás de um defeito que não existe.
+        """
+        if self.has_cuda:
+            return "acelera"
+        placa = self.graphics
+        if placa is None:
+            return "sem_placa"
+        if placa.accelerates_transcription:
+            return "cuda_quebrado"     # é NVIDIA, mas o CTranslate2 não a vê
+        return "outro_fabricante"
 
     @property
     def summary(self) -> str:
-        gpu = (
-            f"{self.gpu_name} ({self.gpu_vram_gb:.1f} GB)"
-            if self.gpu_name and self.gpu_vram_gb
-            else (self.gpu_name or "nenhuma GPU CUDA")
-        )
+        if self.gpus:
+            gpu = gpus_mod.describe(self.gpus)
+            if not self.has_cuda and self.graphics is not None:
+                gpu += " (não acelera a transcrição)"
+        elif self.gpu_name:
+            gpu = f"{self.gpu_name} ({self.gpu_vram_gb:.1f} GB)" if self.gpu_vram_gb \
+                else self.gpu_name
+        else:
+            gpu = "nenhuma placa identificada"
         ram = f"{self.ram_gb:.1f} GB" if self.ram_gb else "desconhecida"
-        return f"{self.cpu_count} threads de CPU, RAM {ram}, GPU: {gpu}"
+        nucleos = (
+            f"{self.physical_cores} núcleos / {self.cpu_count} threads"
+            if self.physical_cores else f"{self.cpu_count} threads"
+        )
+        return f"{nucleos} de CPU, RAM {ram}, GPU: {gpu}"
 
 
 @dataclass(frozen=True)
@@ -116,6 +166,123 @@ def _total_ram_gb() -> float | None:
         return (pages * page_size) / (1024 ** 3)
     except Exception:  # pragma: no cover - plataformas exóticas
         return None
+
+
+#: Relação "um registro por núcleo físico" na API do Windows.
+_RELATION_PROCESSOR_CORE = 0
+
+
+@lru_cache(maxsize=1)
+def physical_cores() -> int | None:
+    """Núcleos de verdade, sem contar as threads irmãs de cada um.
+
+    Importa porque **usar todas as threads lógicas deixa a transcrição mais
+    lenta**, não mais rápida: as duas threads de um mesmo núcleo disputam a
+    mesma unidade de cálculo, e as multiplicações de matriz do modelo já
+    saturam essa unidade com uma thread só. Medido num Ryzen de 6 núcleos e 12
+    threads, com o modelo `small` sobre 4 minutos de áudio: 12 threads levaram
+    43-50 s; 6 núcleos, 40-46 s. O mesmo trabalho, ~10% mais rápido, usando
+    metade das threads.
+
+    `None` quando o sistema não responde — aí vale o número de threads.
+    """
+    try:
+        if sys.platform == "win32":
+            return _windows_physical_cores()
+        if sys.platform == "linux":
+            return _linux_physical_cores()
+        if sys.platform == "darwin":  # pragma: no cover - só em macOS
+            saida = subprocess.run(
+                ["sysctl", "-n", "hw.physicalcpu"], capture_output=True, text=True,
+                timeout=5,
+            )
+            return int(saida.stdout.strip()) or None
+    except Exception as exc:  # pragma: no cover - API indisponível
+        log.debug("Não consegui contar os núcleos físicos: %s", exc)
+    return None
+
+
+def _windows_physical_cores() -> int | None:
+    """`GetLogicalProcessorInformationEx`, que devolve registros de tamanho variável."""
+    kernel32 = ctypes.windll.kernel32
+    tamanho = ctypes.c_ulong(0)
+    kernel32.GetLogicalProcessorInformationEx(
+        _RELATION_PROCESSOR_CORE, None, ctypes.byref(tamanho)
+    )
+    if tamanho.value == 0:
+        return None
+    buffer = (ctypes.c_byte * tamanho.value)()
+    if not kernel32.GetLogicalProcessorInformationEx(
+        _RELATION_PROCESSOR_CORE, buffer, ctypes.byref(tamanho)
+    ):
+        return None
+
+    bruto = bytes(buffer)
+    total = 0
+    posicao = 0
+    while posicao + 8 <= len(bruto):
+        relacao = int.from_bytes(bruto[posicao:posicao + 4], "little")
+        passo = int.from_bytes(bruto[posicao + 4:posicao + 8], "little")
+        if passo == 0:
+            break
+        if relacao == _RELATION_PROCESSOR_CORE:
+            total += 1
+        posicao += passo
+    return total or None
+
+
+def _linux_physical_cores() -> int | None:
+    """Conta pares (soquete, núcleo) distintos no /proc/cpuinfo."""
+    try:
+        texto = Path("/proc/cpuinfo").read_text(encoding="utf-8", errors="replace")
+    except OSError:  # pragma: no cover - sem /proc
+        return None
+    vistos: set[tuple[str, str]] = set()
+    soquete = nucleo = ""
+    for linha in texto.splitlines():
+        if linha.startswith("physical id"):
+            soquete = linha.partition(":")[2].strip()
+        elif linha.startswith("core id"):
+            nucleo = linha.partition(":")[2].strip()
+        elif not linha.strip() and soquete and nucleo:
+            vistos.add((soquete, nucleo))
+            soquete = nucleo = ""
+    if soquete and nucleo:
+        vistos.add((soquete, nucleo))
+    return len(vistos) or None
+
+
+@lru_cache(maxsize=1)
+def cpu_name() -> str:
+    """O nome comercial do processador.
+
+    `platform.processor()` no Windows devolve "AMD64 Family 25 Model 33
+    Stepping 0, AuthenticAMD", que não diz a ninguém qual processador é. O nome
+    de verdade está no registro, e no Linux no /proc/cpuinfo.
+    """
+    try:
+        if sys.platform == "win32":
+            import winreg
+
+            caminho = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, caminho) as chave:
+                nome, _tipo = winreg.QueryValueEx(chave, "ProcessorNameString")
+            if isinstance(nome, str) and nome.strip():
+                return nome.strip()
+        elif sys.platform == "linux":
+            for linha in Path("/proc/cpuinfo").read_text(errors="replace").splitlines():
+                if linha.startswith("model name"):
+                    return linha.partition(":")[2].strip()
+        elif sys.platform == "darwin":  # pragma: no cover - só em macOS
+            saida = subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if saida.stdout.strip():
+                return saida.stdout.strip()
+    except Exception as exc:  # pragma: no cover - registro/arquivo indisponível
+        log.debug("Não consegui ler o nome do processador: %s", exc)
+    return platform.processor() or "CPU"
 
 
 def _query_nvidia_smi() -> tuple[str | None, float | None]:
@@ -193,7 +360,19 @@ def detect_hardware() -> HardwareInfo:
     except Exception as exc:  # pragma: no cover - ctranslate2 ausente
         log.debug("ctranslate2 indisponível para detecção de CUDA: %s", exc)
 
+    placas = tuple(gpus_mod.detect_gpus())
+    log.debug("Placas de vídeo: %s", gpus_mod.describe(placas))
+
     gpu_name, vram = _query_nvidia_smi() if cuda_count > 0 else (None, None)
+    if cuda_count > 0 and gpu_name is None:
+        # Sem o nvidia-smi no PATH (é o caso do aplicativo empacotado), o nome
+        # e a VRAM vêm do registro. Antes, quem usasse o instalador ficava com
+        # "GPU: None" e sem orçamento de VRAM — o modelo era escolhido no
+        # escuro, mesmo com a placa funcionando.
+        acelera = next((g for g in placas if g.accelerates_transcription), None)
+        if acelera is not None:
+            gpu_name, vram = acelera.name, acelera.vram_gb
+
     return HardwareInfo(
         has_cuda=cuda_count > 0,
         cuda_device_count=cuda_count,
@@ -202,6 +381,8 @@ def detect_hardware() -> HardwareInfo:
         cpu_count=os.cpu_count() or 1,
         ram_gb=_total_ram_gb(),
         platform=f"{platform.system()} {platform.release()} ({platform.machine()})",
+        gpus=placas,
+        physical_cores=physical_cores(),
     )
 
 
@@ -282,6 +463,41 @@ def _downgrade(model: str, budget_gb: float | None) -> str:
     return "tiny"
 
 
+def gpu_explanation(hardware: HardwareInfo) -> str:
+    """Uma frase dizendo por que a transcrição vai para o processador.
+
+    Vale a pena ser específico. "Nenhuma GPU CUDA detectada" é verdade nos três
+    casos abaixo e útil em nenhum: quem tem uma Radeon nova lê isso como driver
+    quebrado e vai atrás de um conserto que não existe, e quem tem uma GeForce
+    com o driver pela metade não descobre que o conserto existe.
+    """
+    situacao = hardware.gpu_situation
+    if situacao == "acelera":  # pragma: no cover - quem chama já decidiu o contrário
+        return ""
+    if situacao == "sem_placa":
+        return (
+            "Nenhuma placa de vídeo dedicada foi identificada: a transcrição roda "
+            "no processador."
+        )
+    placa = hardware.graphics
+    if placa is None:  # pragma: no cover - as situações acima já cobrem
+        return "A transcrição roda no processador."
+    if situacao == "cuda_quebrado":
+        return (
+            f"A placa {placa.name} é compatível, mas o CTranslate2 não consegue "
+            "abri-la. Quase sempre é driver NVIDIA desatualizado ou cuDNN ausente. "
+            "Por enquanto, a transcrição roda no processador."
+        )
+    fabricante = gpus_mod.VENDOR_LABELS.get(placa.vendor, placa.vendor)
+    tipo = "A GPU integrada" if placa.integrated else "A placa de vídeo"
+    return (
+        f"{tipo} desta máquina é {fabricante} ({placa.name}), e o motor de "
+        "transcrição só acelera em NVIDIA — não existe caminho CUDA para ela. Não "
+        "é defeito de instalação: a transcrição vai para o processador, que aqui é "
+        "o caminho mais rápido disponível."
+    )
+
+
 def select_runtime(
     *,
     requested_device: str = "auto",
@@ -305,11 +521,12 @@ def select_runtime(
     if requested_device == "auto":
         device = "cuda" if hardware.has_cuda else "cpu"
         if not hardware.has_cuda:
-            notes.append("Nenhuma GPU CUDA detectada: usando CPU.")
+            notes.append(gpu_explanation(hardware))
     else:
         device = requested_device
         if device == "cuda" and not hardware.has_cuda:
             notes.append("GPU pedida, mas o CTranslate2 não enxerga nenhum device CUDA.")
+            notes.append(gpu_explanation(hardware))
 
     if requested_compute_type != "auto":
         compute_type = requested_compute_type
@@ -333,7 +550,7 @@ def select_runtime(
         device=device,
         compute_type=compute_type,
         model=model,
-        device_name=hardware.gpu_name if device == "cuda" else platform.processor() or "CPU",
+        device_name=hardware.gpu_name if device == "cuda" else cpu_name(),
         notes=notes,
     )
 
@@ -348,7 +565,7 @@ def cpu_fallback(
         device="cpu",
         compute_type="int8",
         model=_downgrade(choice.model, budget),
-        device_name=platform.processor() or "CPU",
+        device_name=cpu_name(),
         notes=[*choice.notes, f"Fallback para CPU: {reason}"],
     )
 
@@ -429,6 +646,49 @@ def _ffmpeg_finding() -> Finding:
     return Finding("ffmpeg", "instalado", "boa")
 
 
+def _gpu_finding(hardware: HardwareInfo) -> Finding:
+    """A linha da placa de vídeo no diagnóstico.
+
+    Nenhuma das situações é "ruim": rodar no processador funciona, só demora
+    mais. Mas as quatro merecem frases diferentes, porque levam a ações
+    diferentes — e a única acionável é o driver pela metade.
+    """
+    placa = hardware.graphics
+    if hardware.has_cuda and hardware.gpu_vram_gb:
+        nota = _grade(hardware.gpu_vram_gb, 6, 4, 2)
+        return Finding(
+            "Placa de vídeo",
+            f"{hardware.gpu_name} ({hardware.gpu_vram_gb:.1f} GB)", nota,
+            "" if nota in ("boa", "ok")
+            else "Pouca VRAM: o modelo vai ser rebaixado para caber na placa.",
+        )
+    if hardware.has_cuda:  # pragma: no cover - CUDA sem nome é caso de driver raro
+        return Finding("Placa de vídeo", "GPU NVIDIA (memória desconhecida)", "ok")
+
+    if placa is None:
+        # Não ter GPU não é defeito: é o caso mais comum, só mais lento.
+        return Finding(
+            "Placa de vídeo", "nenhuma identificada", "ok",
+            "Vai rodar no processador. Funciona, mas demora mais.",
+        )
+    if placa.accelerates_transcription:
+        # Nota "ok" de propósito: rebaixar o veredito da máquina inteira faria
+        # o diagnóstico recomendar diminuir os limites, que é o oposto do que
+        # esta máquina precisa. O conselho certo entra em `assess_machine`.
+        return Finding(
+            "Placa de vídeo", f"{placa.label} — não está sendo usada", "ok",
+            "A placa serve, mas o CTranslate2 não consegue abri-la: driver NVIDIA "
+            "desatualizado ou cuDNN ausente. É a única coisa nesta lista que vale "
+            "a pena consertar.",
+        )
+    return Finding(
+        "Placa de vídeo", f"{placa.vendor_label} {placa.label}".strip(), "ok",
+        "O motor de transcrição só acelera em NVIDIA, então esta placa não entra "
+        "no trabalho. Não é defeito nem driver faltando — o processador é o "
+        "caminho mais rápido que esta máquina tem.",
+    )
+
+
 def assess_machine(
     hardware: HardwareInfo | None = None, models_dir: Path | None = None
 ) -> MachineCheck:
@@ -442,9 +702,16 @@ def assess_machine(
     hardware = hardware or detect_hardware()
     achados: list[Finding] = []
 
-    nota_cpu = _grade(float(hardware.cpu_count), 8, 4, 2)
+    # A nota é pelos núcleos físicos: são eles que fazem a conta. Uma máquina
+    # de 4 núcleos e 8 threads não transcreve como uma de 8 núcleos.
+    nota_cpu = _grade(float(hardware.cores), 8, 4, 2)
+    detalhe_cpu = (
+        f"{hardware.cores} núcleos ({hardware.cpu_count} threads)"
+        if hardware.physical_cores and hardware.physical_cores != hardware.cpu_count
+        else f"{hardware.cores} núcleos"
+    )
     achados.append(Finding(
-        "Processador", f"{hardware.cpu_count} threads", nota_cpu,
+        "Processador", f"{cpu_name()} — {detalhe_cpu}", nota_cpu,
         "" if nota_cpu in ("boa", "ok")
         else "Com poucos núcleos a transcrição na CPU fica várias vezes mais lenta "
              "que o tempo do áudio.",
@@ -460,18 +727,7 @@ def assess_machine(
              "faltar memória.",
     ))
 
-    if hardware.has_cuda and hardware.gpu_vram_gb:
-        nota_gpu = _grade(hardware.gpu_vram_gb, 6, 4, 2)
-        achados.append(Finding(
-            "Placa de vídeo", f"{hardware.gpu_name} ({hardware.gpu_vram_gb:.1f} GB)",
-            nota_gpu,
-        ))
-    else:
-        # Não ter GPU não é defeito: é o caso mais comum, só mais lento.
-        achados.append(Finding(
-            "Placa de vídeo", "nenhuma GPU CUDA", "ok",
-            "Vai rodar na CPU. Funciona, mas demora mais.",
-        ))
+    achados.append(_gpu_finding(hardware))
 
     livre = _free_disk_gb(models_dir or Path("./models"))
     nota_disco = _grade(livre, 5, 2, 1)
@@ -493,6 +749,12 @@ def assess_machine(
     }
 
     conselhos: list[str] = []
+    if hardware.gpu_situation == "cuda_quebrado":
+        conselhos.append(
+            "Sua placa NVIDIA está aqui mas não está sendo usada. Atualize o driver "
+            "pelo aplicativo da NVIDIA; se o problema continuar, o que falta é o "
+            "cuDNN. Resolvido isso, a transcrição fica várias vezes mais rápida."
+        )
     if nivel in ("apertada", "ruim"):
         conselhos.append(
             "Comece com arquivos curtos e com a qualidade em \"Rascunho\" ou "

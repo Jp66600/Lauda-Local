@@ -3,8 +3,10 @@
 Honestidade sobre o que cada controle realmente faz — porcentagem bonita na
 tela que não corresponde a nada é pior do que não ter controle:
 
-* **CPU**  — vira número de threads (CTranslate2 e ffmpeg) e prioridade do
-  processo. É um limite de verdade: em 25% o app usa 1/4 dos núcleos.
+* **CPU**  — vira número de núcleos (CTranslate2, torch e ffmpeg) e prioridade
+  do processo. É um limite de verdade: em 25% o app usa 1/4 dos núcleos. A
+  conta é sobre núcleos **físicos**: usar as threads lógicas também deixa a
+  transcrição mais lenta, não mais rápida (ver `hardware.physical_cores`).
 * **RAM**  — vira o teto de memória considerado ao escolher o modelo em CPU.
   Não é um `ulimit`: impede o app de *escolher* um modelo grande demais.
 * **VRAM** — mesma ideia na GPU. O CTranslate2 não expõe um teto rígido de
@@ -41,6 +43,18 @@ MIN_PERCENT = 10
 MAX_PERCENT = 100
 
 
+def _default_cores() -> int:
+    """Base da conta de CPU: núcleos físicos, com as threads lógicas de reserva.
+
+    O import fica aqui dentro de propósito: `hardware` é um módulo pesado (ele
+    toca no CTranslate2 e no driver de vídeo), e `limits` é carregado cedo, até
+    pelo processo filho que só quer ler um número.
+    """
+    from .hardware import physical_cores
+
+    return physical_cores() or os.cpu_count() or 1
+
+
 @dataclass(frozen=True)
 class ResourceLimits:
     """Quanto da máquina o aplicativo pode ocupar, em porcentagem."""
@@ -66,8 +80,15 @@ class ResourceLimits:
         return self.gpu_percent > 0
 
     def cpu_threads(self, total: int | None = None) -> int:
-        """Quantas threads o motor pode usar. Sempre pelo menos 1."""
-        total = total or os.cpu_count() or 1
+        """Quantas threads o motor pode usar. Sempre pelo menos 1.
+
+        A conta é sobre os **núcleos físicos**, não sobre as threads lógicas.
+        Isto não é economia: medido, usar todas as threads lógicas deixa a
+        transcrição mais lenta, porque as duas threads de um mesmo núcleo
+        disputam a unidade de cálculo que as multiplicações de matriz já
+        saturam sozinhas. Ver `hardware.physical_cores`.
+        """
+        total = total or _default_cores()
         return max(1, round(total * self.cpu_percent / 100))
 
     def gpu_workers(self) -> int:
@@ -85,7 +106,7 @@ class ResourceLimits:
     def describe(self) -> str:
         gpu = "desligada" if not self.use_gpu else f"{self.gpu_percent}%"
         return (
-            f"CPU {self.cpu_percent}% ({self.cpu_threads()} threads), "
+            f"CPU {self.cpu_percent}% ({self.cpu_threads()} núcleos), "
             f"RAM {self.ram_percent}%, GPU {gpu}, VRAM {self.vram_percent}%"
         )
 

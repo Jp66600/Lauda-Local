@@ -57,6 +57,30 @@ def test_cpu_nunca_chega_a_zero_threads():
     assert ResourceLimits(cpu_percent=10).cpu_threads(1) == 1
 
 
+def test_a_conta_de_cpu_e_sobre_nucleos_fisicos(monkeypatch):
+    """Usar as threads lógicas também deixa a transcrição mais LENTA.
+
+    As duas threads de um mesmo núcleo disputam a unidade de cálculo que as
+    multiplicações de matriz já saturam sozinhas. Medido num Ryzen 6/12 com o
+    modelo `small`: 12 threads levaram 43-50 s contra 40-46 s em 6 núcleos.
+    """
+    from lauda import limits as modulo
+
+    monkeypatch.setattr(modulo, "_default_cores", lambda: 6)   # 6 núcleos, 12 threads
+
+    assert ResourceLimits(cpu_percent=100).cpu_threads() == 6
+
+
+def test_sem_saber_os_nucleos_fisicos_valem_as_threads(monkeypatch):
+    """Máquina que não conta núcleos não pode ficar sem resposta."""
+    from lauda import limits as modulo
+
+    monkeypatch.setattr("lauda.hardware.physical_cores", lambda: None)
+    monkeypatch.setattr(modulo.os, "cpu_count", lambda: 12)
+
+    assert modulo._default_cores() == 12
+
+
 def test_paralelismo_da_gpu_diminui_com_o_limite():
     assert ResourceLimits(gpu_percent=100).gpu_workers() == 2
     assert ResourceLimits(gpu_percent=30).gpu_workers() == 1

@@ -1460,13 +1460,22 @@ def test_a_rodada_seguinte_le_a_tela_de_novo(app, silent_video: Path):
 
 
 # --------------------------------------------- página Desempenho (028/029) --
-def _maquina(app, *, cuda: bool, vram=4.0, ram=16.0, nucleos=16):
+def _placa(vendor: str, nome: str, vram=None, integrada=None):
+    from lauda.gpus import Gpu
+
+    return Gpu(vendor=vendor, name=nome, vram_gb=vram, integrated=integrada)
+
+
+def _maquina(app, *, cuda: bool, vram=4.0, ram=16.0, nucleos=16, placas=None):
     from lauda.hardware import Finding, HardwareInfo, MachineCheck
 
+    if placas is None:
+        placas = [_placa("nvidia", "RTX 3050", vram)] if cuda else []
     hardware = HardwareInfo(
         has_cuda=cuda, cuda_device_count=1 if cuda else 0,
         gpu_name="RTX 3050" if cuda else None, gpu_vram_gb=vram if cuda else None,
         cpu_count=nucleos, ram_gb=ram, platform="teste",
+        gpus=tuple(placas), physical_cores=nucleos,
     )
     check = MachineCheck(
         level="ok", headline="Esta máquina dá conta.",
@@ -1544,7 +1553,7 @@ def test_maquina_sem_gpu_explica_o_motivo(app):
     _maquina(app, cuda=False)
     app.apply_preset("rapido")
 
-    assert "Nenhuma placa NVIDIA" in app.perf_plan.cget("text")
+    assert "Nenhuma placa de vídeo dedicada" in app.perf_plan.cget("text")
 
 
 def test_limite_abaixo_do_recomendado_vira_aviso(app):

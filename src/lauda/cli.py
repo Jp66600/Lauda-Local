@@ -307,6 +307,22 @@ def doctor_command() -> None:
 
     hardware = detect_hardware()
     table.add_row("Hardware", hardware.summary)
+
+    # Uma linha por adaptador, com o fabricante. É o que se pede a quem relata
+    # "está lento": diz de uma vez se a máquina tem placa, de quem ela é e se
+    # o motor consegue usá-la.
+    if hardware.gpus:
+        for gpu in hardware.gpus:
+            usa = (
+                "[green]acelera a transcrição[/green]"
+                if gpu.accelerates_transcription and hardware.has_cuda
+                else "[yellow]não acelera a transcrição[/yellow]"
+            )
+            rotulo = f"{gpu.vendor_label} {gpu.label}".strip()
+            table.add_row("Placa de vídeo", f"{rotulo} — {usa}")
+    else:
+        table.add_row("Placa de vídeo", "[yellow]nenhuma identificada[/yellow]")
+
     choice = select_runtime(requested_model="large-v3-turbo", hardware=hardware)
     table.add_row(
         "Escolha automática",

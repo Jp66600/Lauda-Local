@@ -43,6 +43,7 @@ from .hardware import (
     MachineCheck,
     assess_machine,
     detect_hardware,
+    gpu_explanation,
     recommended_for,
     select_runtime,
 )
@@ -1874,12 +1875,12 @@ class LaudaApp:
         """Onde o trabalho vai rodar, em português. Devolve (resumo, detalhe)."""
         hardware = self.machine.hardware if self.machine else None
         modelo = self._selected(self.model_var, MODEL_LABELS)
-        nucleos = hardware.cpu_count if hardware else (os.cpu_count() or 1)
+        nucleos = hardware.cores if hardware else (os.cpu_count() or 1)
         threads = self.limits.cpu_threads(nucleos)
 
         if hardware is None:
             return (
-                f"Processador: {threads} de {nucleos} threads liberadas. "
+                f"Processador: {threads} de {nucleos} núcleos liberados. "
                 "O diagnóstico ainda está rodando.",
                 "",
             )
@@ -1896,13 +1897,13 @@ class LaudaApp:
             )
         else:
             resumo = (
-                f"A transcrição vai rodar no processador, com {threads} de {nucleos} "
-                f"threads e o modelo {escolha.model}."
+                f"A transcrição vai rodar no processador ({escolha.device_name}), "
+                f"com {threads} de {nucleos} núcleos e o modelo {escolha.model}."
             )
             if hardware.has_cuda and not self.limits.use_gpu:
                 resumo += "\nA placa de vídeo está desligada nos Limites (GPU em 0%)."
-            elif not hardware.has_cuda:
-                resumo += "\nNenhuma placa NVIDIA compatível foi encontrada."
+            else:
+                resumo += "\n" + gpu_explanation(hardware)
         detalhe = "\n".join(escolha.notes)
         return resumo, detalhe
 

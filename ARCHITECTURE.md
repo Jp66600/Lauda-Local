@@ -22,7 +22,7 @@ o contrário vai propor a solução errada.
 
 | | |
 |---|---|
-| Transcrição | faster-whisper (CTranslate2) |
+| Transcrição | faster-whisper (CTranslate2) — acelera só em **NVIDIA**; AMD e Intel rodam no processador |
 | Leitura de mídia | ffmpeg / ffprobe, sempre por lista de argumentos, nunca por shell |
 | Quem fala | SpeechBrain ECAPA (sem token) ou pyannote (com token) |
 | Resumo opcional | Ollama local, `qwen3:14b` |
@@ -61,6 +61,7 @@ src/lauda/
   runner.py       supervisiona o processo filho: mata se travar, retoma
   worker.py       o processo filho; fala JSON por linha com o pai
   checkpoint.py   pontos de retomada por sha256 + opcoes
+  gpus.py         de quem e a placa de video (NVIDIA/AMD/Intel/integrada)
   hardware.py     detecta CPU/RAM/GPU e avalia se a maquina da conta
   limits.py       os limites de uso (sliders e os quatro presets)
   profile.py      a pasta ~/.lauda e a migracao do nome antigo
