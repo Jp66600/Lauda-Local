@@ -134,6 +134,12 @@ _DISPLAY_CLASS = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bf
 
 
 def _windows_gpus() -> list[Gpu]:
+    # A guarda é de plataforma e de tipo: o `winreg` só existe no Windows, e
+    # sem ela o mypy rodando no Linux (é o caso da integração contínua)
+    # analisa este corpo e não encontra nenhuma das funções.
+    if sys.platform != "win32":  # pragma: no cover - a chamada já é por plataforma
+        return []
+
     import winreg
 
     achadas: list[Gpu] = []

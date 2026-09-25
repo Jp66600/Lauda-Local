@@ -35,8 +35,20 @@ jobs:
       - name: ruff
         run: ruff check src tests scripts
 
-      - name: mypy
-        run: mypy src
+      # O mypy analisa um sistema operacional de cada vez: código dentro de
+      # `if sys.platform == "win32"` ele simplesmente não lê quando roda no
+      # Linux. Como este projeto é feito no Windows e a checagem roda aqui, as
+      # duas metades passariam despercebidas cada uma na sua vez — foi o que
+      # aconteceu com o `winreg` da detecção de placa de vídeo. Os três
+      # sistemas, então.
+      - name: mypy (Linux)
+        run: mypy src --platform linux
+
+      - name: mypy (Windows)
+        run: mypy src --platform win32
+
+      - name: mypy (macOS)
+        run: mypy src --platform darwin
 
   testes:
     name: pytest (${{ matrix.os }})

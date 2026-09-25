@@ -204,6 +204,9 @@ def physical_cores() -> int | None:
 
 def _windows_physical_cores() -> int | None:
     """`GetLogicalProcessorInformationEx`, que devolve registros de tamanho variável."""
+    if sys.platform != "win32":  # pragma: no cover - guarda de plataforma e de tipo
+        return None
+
     kernel32 = ctypes.windll.kernel32
     tamanho = ctypes.c_ulong(0)
     kernel32.GetLogicalProcessorInformationEx(

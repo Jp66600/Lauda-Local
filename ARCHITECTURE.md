@@ -121,6 +121,9 @@ regressão, não escolha de estilo.
 8. **Só a thread da interface toca em widget.** O que vem do trabalho chega pela
    fila e é desenhado em `_drain_queue`.
 9. **`ruff check src tests scripts` e `mypy src` limpos**, e a suíte passando.
+   O mypy roda **três vezes**, uma por `--platform` (linux, win32, darwin):
+   ele não lê o que está dentro de um `if sys.platform` que não é o dele, e
+   este projeto tem código dos três.
    `ruff format` **não** é usado: ele explodiria as tabelas de dados do laudo.
 10. **Um processamento por vez.** A fila da página "Novo trabalho" é serial de
     propósito: dois modelos carregados ao mesmo tempo disputam a mesma memória

@@ -45,11 +45,30 @@ python -m pytest tests -q
 
 ```bash
 ruff check src tests scripts
-mypy src
+mypy src --platform linux
+mypy src --platform win32
+mypy src --platform darwin
 python -m pytest tests -q
 ```
 
-Os três precisam passar. É o mesmo que a integração contínua roda.
+Todos precisam passar. É o mesmo que a integração contínua roda.
+
+**Por que o mypy roda três vezes.** Ele analisa um sistema operacional de cada
+vez: o que está dentro de `if sys.platform == "win32"` ele simplesmente não lê
+quando está no Linux, e vice-versa. Como o projeto é escrito no Windows e a
+integração contínua checa no Linux, cada metade passaria despercebida na vez da
+outra — foi o que aconteceu com o `winreg` da detecção de placa de vídeo, que
+passou aqui e quebrou lá.
+
+Daí uma regra de código: **função que usa API de um sistema só começa com a
+guarda dela**, não confia em quem a chama.
+
+```python
+def _windows_physical_cores() -> int | None:
+    if sys.platform != "win32":
+        return None
+    ...
+```
 
 **`ruff format` não é usado**, de propósito: ele reformata as tabelas de dados do
 laudo e dos manuais para uma linha por item e as torna ilegíveis. A formatação é
