@@ -126,6 +126,24 @@ class _GpuRuntimeFailure(RuntimeError):
     """A GPU carregou o modelo mas falhou ao inferir (cuBLAS/cuDNN/VRAM)."""
 
 
+def _run_onnx(
+    wav_path: Path,
+    options: JobOptions,
+    choice: RuntimeChoice,
+    progress: ProgressCallback | None,
+    media_duration: float | None,
+) -> TranscriptionOutput:
+    """Transcreve pelo segundo motor, na placa que não é NVIDIA."""
+    from . import onnx_engine
+
+    saida = onnx_engine.transcribe(
+        wav_path, options, choice, progress=progress, media_duration=media_duration
+    )
+    if not saida.segments:
+        raise TranscriptionError("A placa de vídeo não devolveu nenhum trecho.")
+    return saida
+
+
 def transcribe_audio(
     wav_path: Path,
     options: JobOptions,
@@ -139,6 +157,25 @@ def transcribe_audio(
     ausente, que só aparece na primeira inferência — refaz tudo na CPU em vez
     de devolver um relatório vazio.
     """
+    escolha = select_runtime(
+        requested_device=options.effective_device,
+        requested_compute_type=options.compute_type,
+        requested_model=options.model,
+        hardware=detect_hardware(),
+        limits=options.limits,
+    )
+    if escolha.engine == "onnx":
+        try:
+            return _run_onnx(wav_path, options, escolha, progress, media_duration)
+        except Exception as exc:
+            # A placa não-NVIDIA é um ganho, não um requisito: se ela falhar, o
+            # trabalho continua no processador em vez de morrer. O motivo vai
+            # para o registro inteiro, porque é assim que ele chega até mim.
+            log.warning(
+                "O segundo motor (placa de vídeo) falhou: %s. Refazendo no processador.",
+                exc, exc_info=log.isEnabledFor(logging.DEBUG),
+            )
+
     model, choice = load_model_with_fallback(options)
     try:
         return _run_transcription(

@@ -139,6 +139,14 @@ class RuntimeChoice:
     model: str
     device_name: str | None
     notes: list[str]
+    #: Qual motor roda a transcrição. O `ctranslate2` é o principal e atende
+    #: CPU e NVIDIA; o `onnx` existe só para as placas que o CTranslate2 não
+    #: sabe abrir — AMD, Intel e integradas — via DirectML.
+    engine: str = "ctranslate2"
+
+    @property
+    def on_gpu(self) -> bool:
+        return self.device in ("cuda", "dml")
 
 
 def _total_ram_gb() -> float | None:
@@ -549,12 +557,75 @@ def select_runtime(
             else f"Modelo rebaixado de '{requested_model}' para '{model}'."
         )
 
+    # A placa que o CTranslate2 não sabe abrir ainda pode trabalhar, pelo
+    # segundo motor. Só se chega aqui quando o caminho CUDA já foi descartado.
+    if device == "cpu" and (limits is None or limits.use_gpu):
+        pela_placa = _try_onnx(hardware, model, requested_device)
+        if pela_placa is not None:
+            return pela_placa
+
     return RuntimeChoice(
         device=device,
         compute_type=compute_type,
         model=model,
         device_name=hardware.gpu_name if device == "cuda" else cpu_name(),
         notes=notes,
+        engine="ctranslate2",
+    )
+
+
+def _try_onnx(
+    hardware: HardwareInfo, model: str, requested_device: str
+) -> RuntimeChoice | None:
+    """A escolha pelo segundo motor, quando ela faz sentido e é possível.
+
+    Devolve `None` — e a transcrição segue no processador — sempre que faltar
+    alguma peça. Nenhum destes casos é defeito: o DirectML só existe no
+    Windows, nem todo modelo tem build ONNX publicado, e há máquina sem placa.
+    """
+    if requested_device == "cpu":
+        return None                      # o usuário pediu processador
+    placa = hardware.graphics
+    if placa is None or placa.accelerates_transcription:
+        return None                      # sem placa, ou é NVIDIA (outro caminho)
+
+    from . import onnx_engine  # importado aqui: puxa o onnxruntime
+
+    repo = onnx_engine.supported_model(model)
+    if repo is None:
+        log.debug("Sem build ONNX do modelo '%s'; fica no processador.", model)
+        return None
+    pronto, motivo = onnx_engine.available()
+    if not pronto:
+        log.debug("Segundo motor indisponível: %s", motivo)
+        return None
+
+    # "A placa é mais rápida que o processador?" não tem resposta única: um
+    # lado escala com a placa, o outro com o processador. Enquanto ninguém
+    # mediu NESTA máquina, fica o processador — é o caminho que sabidamente
+    # funciona, e ligar a placa no escuro pode deixar o trabalho mais lento.
+    from . import gpu_bench
+
+    medido = gpu_bench.load(placa.name, model)
+    if medido is None:
+        log.debug("Sem medição para %s: fica no processador por ora.", placa.name)
+        return None
+    if medido.winner != "onnx":
+        log.debug("Nesta máquina a medição deu o processador como mais rápido.")
+        return None
+
+    return RuntimeChoice(
+        device="dml",
+        compute_type="float16",
+        model=model,
+        device_name=placa.name,
+        notes=[
+            f"A transcrição vai rodar na {placa.name} pelo DirectML. É o segundo "
+            "motor do programa: ele atende as placas que não são NVIDIA, e em "
+            "troca não marca o tempo de cada palavra.",
+            medido.describe(),
+        ],
+        engine="onnx",
     )
 
 

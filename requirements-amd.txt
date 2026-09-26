@@ -1,0 +1,22 @@
+# Aceleração em placa de vídeo que NÃO é NVIDIA (AMD, Intel, integrada).
+#
+# O motor principal do programa é o CTranslate2, e ele só tem caminho para CPU
+# e CUDA. Este arquivo instala o segundo motor, que fala com qualquer placa
+# DirectX 12 pelo DirectML. Só faz sentido no Windows.
+#
+#     pip install -r requirements.txt -r requirements-amd.txt
+#
+# ATENÇÃO à ordem: o `onnxruntime-directml` precisa ser instalado DEPOIS do
+# `onnxruntime` comum (que vem junto com o faster-whisper), porque os dois
+# ocupam a mesma pasta e vale o último. O pacote DirectML também traz o
+# provedor de CPU, então nada se perde.
+#
+# CONFLITO CONHECIDO: o `transformers` exige huggingface-hub<1 e o `gradio`
+# exige >=1.16. Instalando isto, a interface de navegador (`lauda ui`) pode
+# parar de funcionar. A janela nativa, que é o produto, não é afetada — e o
+# instalador do Windows nunca teve Gradio dentro.
+transformers>=4.44,<5
+optimum~=2.1.0
+optimum-onnx>=0.1.0
+onnx>=1.16
+onnxruntime-directml>=1.20

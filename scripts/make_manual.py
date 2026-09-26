@@ -509,9 +509,10 @@ def section_interface() -> list:
                  "aplicativo da NVIDIA; se continuar, o que falta é o cuDNN. "
                  "Resolvido, a transcrição fica várias vezes mais rápida."],
                 ["Uma placa AMD, Intel ou integrada",
-                 "Nada a fazer. Elas não têm caminho CUDA, e o motor não tem outro. "
-                 "Não é defeito de instalação nem driver faltando: o processador é o "
-                 "caminho mais rápido que a máquina tem, e é o que vai ser usado."],
+                 "<b>Clique em “Medir a minha placa”.</b> Ela consegue transcrever, "
+                 "por um segundo motor; se vale a pena depende desta máquina, e o "
+                 "botão descobre em um minuto. Enquanto ninguém mede, o trabalho vai "
+                 "para o processador."],
                 ["“Nenhuma identificada”",
                  "Nada. É o caso mais comum, e funciona — só demora mais que numa "
                  "NVIDIA."],
@@ -521,6 +522,35 @@ def section_interface() -> list:
             strong_columns=(0,),
         ),
         Spacer(1, 2 * mm),
+        heading("Medir a minha placa", "h3"),
+        para(
+            "Este botão só aparece em máquina com placa AMD, Intel ou integrada — nas "
+            "outras não há escolha a fazer. Ele transcreve <b>20 segundos do seu "
+            "próprio arquivo</b> de duas maneiras, na placa e no processador, e fica "
+            "com a mais rápida. Leva cerca de um minuto, e é uma vez só: o resultado "
+            "fica guardado, por placa e por modelo."
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "Ele existe porque a resposta muda de máquina para máquina. O motor do "
+            "processador é muito bem otimizado; o da placa depende do DirectML, que é "
+            "uma camada de compatibilidade do Windows. Num Ryzen 5 5600X de 6 núcleos "
+            "com uma RTX 4060, o processador ganhou de 8,3x para 5,1x tempo real. Num "
+            "processador fraco com uma Radeon boa, a conta se inverte. Ligar a placa "
+            "no escuro deixaria parte das pessoas mais lenta sem avisar — então quem "
+            "responde é a sua máquina, não um palpite de quem escreveu o programa."
+        ),
+        Spacer(1, 2 * mm),
+        note(
+            "O que muda quando a placa ganha",
+            "O laudo deixa de trazer o <b>Bloco C</b>, o tempo de cada palavra: o "
+            "motor da placa não o calcula. Se você precisa dele, processe no "
+            "processador. Também só entram os modelos Rascunho, Recomendado e "
+            "Turbo — os outros não têm versão publicada para este motor, e trocar "
+            "um por outro parecido seria mudar a qualidade sem avisar.",
+            AMBER,
+        ),
+        Spacer(1, 3 * mm),
         para(
             "Se a sua placa cai no terceiro caso, o controle de <b>processador</b> na "
             "aba Limites é o que muda a velocidade — e ele já vem no máximo. O número "

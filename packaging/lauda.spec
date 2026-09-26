@@ -41,6 +41,12 @@ for pacote in (
     "speechbrain",
     "torchaudio",
     "tkinterdnd2",         # a extensão tkdnd é Tcl, não Python
+    # O segundo motor, para as placas que não são NVIDIA. O `optimum` escolhe
+    # a classe do modelo por nome em tempo de execução, e o `transformers`
+    # importa metade de si mesmo preguiçosamente: os dois são invisíveis para
+    # o analisador estático.
+    "optimum",
+    "transformers",
 ):
     extra_bin, extra_dados, extra_ocultos = collect_all(pacote)
     binarios += extra_bin

@@ -2,6 +2,48 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.17.0-beta] — 2026-09-25
+
+### Adicionado
+
+- **Segundo motor de transcrição, para as placas que não são NVIDIA**
+  (`onnx_engine.py`): ONNX Runtime com DirectML, que fala com qualquer placa
+  DirectX 12 — AMD, Intel e integradas, do mesmo jeito. O motor principal
+  (CTranslate2) continua atendendo CPU e NVIDIA, que é onde ele é mais rápido.
+- **Medição de desempenho na própria máquina** (`gpu_bench.py`), com o botão
+  "Medir a minha placa" na página Desempenho. Ele transcreve 20 segundos do
+  arquivo do usuário nos dois motores e guarda quem ganhou, por placa e por
+  modelo. **É a medição que decide qual motor roda os trabalhos seguintes.**
+- `requirements-amd.txt`, opcional, com o que esse motor precisa. O instalador
+  do Windows já vem com tudo dentro.
+
+### Mudado
+
+- **Sem medição, o trabalho fica no processador.** Não é conservadorismo: numa
+  máquina medida aqui — Ryzen 5 5600X de 6 núcleos com uma RTX 4060 pelo
+  DirectML — o processador ganhou de 8,3x para 5,1x tempo real. Num
+  processador fraco com uma placa boa a conta se inverte, e é exatamente por
+  isso que quem responde é a máquina de cada um, e não uma regra fixa aqui.
+- O motor da placa **não marca o tempo de cada palavra**. Quem pediu o BLOCO C
+  recebe o aviso no laudo em vez de um bloco que some.
+
+### Notas técnicas
+
+Três armadilhas do DirectML foram pagas em depuração e estão amarradas no
+código, com o porquê:
+
+1. **`use_io_binding=True` é obrigatório.** Sem ele o DirectML não erra um
+   pouco: devolve lixo. O mesmo arquivo e o mesmo áudio saem como
+   "further donuts 행 Unf eran praw" em vez de português.
+2. **Tensor de comprimento zero não pode ser alocado na placa** — criar um
+   derruba o processo na hora, sem exceção. O cache vazio do primeiro passo
+   nasce na CPU.
+3. **O modelo é fp16**, o que dá o mesmo texto do fp32 e metade do download.
+
+Só os modelos com build ONNX publicado entram: `tiny`, `base`, `small` e
+`large-v3-turbo`. Trocar um modelo sem build por outro parecido seria mudar a
+qualidade sem avisar, então o `large-v3` e o `medium` continuam no processador.
+
 ## [0.16.0-beta] — 2026-09-25
 
 ### Adicionado

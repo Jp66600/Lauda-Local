@@ -34,7 +34,7 @@ from tkinter import Tk, filedialog, messagebox, ttk
 from tkinter import font as tkfont
 from typing import Any
 
-from . import APP_NAME, APP_VERSION, history
+from . import APP_NAME, APP_VERSION, history, onnx_engine
 from .config import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS, JobOptions
 from .cues import DENSITY_LABELS
 from .errors import LaudaError
@@ -1797,7 +1797,18 @@ class LaudaApp:
             font=self.font_body,
         )
         botao_dialogo.pack(side="left", padx=(10, 0))
-        self._buttons += [botao_reavaliar, botao_dialogo]
+        # Só aparece em máquina com placa que não é NVIDIA: nas outras não há
+        # nada a medir, e um botão que não serve para nada é ruído.
+        self.button_bench = RoundedButton(
+            acoes, text="Medir a minha placa", command=self.measure_gpu,
+            font=self.font_body, icon="chart",
+        )
+        self._buttons += [botao_reavaliar, botao_dialogo, self.button_bench]
+
+        self.bench_label = ttk.Label(
+            page, text="", style="Hint.TLabel", wraplength=600, justify="left"
+        )
+        self.bench_label.grid(row=6, column=0, sticky="w", pady=(10, 0))
 
     def _refresh_diagnostics(self) -> None:
         """Redesenha a lista de achados. Chamada quando o veredito chega."""
@@ -1894,6 +1905,14 @@ class LaudaApp:
                 f"({escolha.device_name or 'GPU'}), com o modelo {escolha.model}.\n"
                 "Na placa, o medidor do processador fica quase parado — isso é o "
                 "esperado, não é defeito."
+            )
+        elif escolha.device == "dml":
+            resumo = (
+                f"A transcrição vai rodar na placa de vídeo "
+                f"({escolha.device_name or 'GPU'}) pelo DirectML, com o modelo "
+                f"{escolha.model}.\n"
+                "Foi a medição feita neste computador que escolheu esse caminho. "
+                "Este motor não marca o tempo de cada palavra."
             )
         else:
             resumo = (
@@ -2389,6 +2408,10 @@ class LaudaApp:
                     self._on_error(payload)
                 elif kind == "machine":
                     self._on_machine(payload)
+                elif kind == "bench":
+                    self._on_bench(payload)
+                elif kind == "bench_erro":
+                    self._on_bench_error(payload)
                 elif kind == "log":
                     self._append_log(payload)
                 elif kind == "ollama":
@@ -2481,13 +2504,125 @@ class LaudaApp:
 
         threading.Thread(target=trabalho, name="lauda-hardware", daemon=True).start()
 
+    # ------------------------------------------------- medir a placa de vídeo --
+    def measure_gpu(self) -> None:
+        """Roda os dois motores num trecho do arquivo e guarda quem ganhou.
+
+        Existe porque a resposta muda de máquina para máquina: o motor da CPU é
+        muito bem otimizado, e o da placa depende do DirectML. Num Ryzen 5600X
+        com uma RTX 4060, a CPU ganhou de 8,3x para 5,1x; num processador fraco
+        com uma Radeon boa, a conta se inverte. Em vez de eu chutar por todo
+        mundo, a máquina de cada um responde por si.
+        """
+        from . import gpu_bench
+
+        if self.input_path is None:
+            messagebox.showinfo(
+                APP_NAME,
+                "Escolha um arquivo em \"Novo trabalho\" primeiro. A medição usa "
+                "um trecho do seu próprio áudio — sotaque e ruído mudam o tempo, "
+                "e um trecho inventado mediria outra coisa.",
+            )
+            return
+        placa = self.machine.hardware.graphics if (self.machine and self.machine.hardware) else None
+        if placa is None:
+            return
+
+        self.button_bench.configure(state="disabled", text="Medindo…")
+        self.bench_label.configure(
+            text="Transcrevendo 20 segundos do seu arquivo nos dois motores. "
+                 "Leva cerca de um minuto.",
+            foreground=self.theme.ink_soft,
+        )
+        escolhas = dict(self._options_snapshot())
+        escolhas.pop("output_dir", None)
+        opcoes = JobOptions(
+            input_path=self.input_path,
+            output_dir=Path(tempfile.gettempdir()),
+            models_dir=models_dir(),
+            **escolhas,
+        )
+
+        def trabalho() -> None:
+            try:
+                from .extract import extract_audio
+
+                with tempfile.TemporaryDirectory(prefix="lauda-bench-") as pasta:
+                    wav = extract_audio(opcoes.input_path, Path(pasta))
+                    resultado = gpu_bench.run(wav, opcoes, placa.name)
+                self.queue.put(("bench", resultado))
+            except Exception as exc:
+                log.warning("A medição da placa não deu certo: %s", exc)
+                self.queue.put(("bench_erro", str(exc)[:300]))
+
+        threading.Thread(target=trabalho, name="lauda-bench", daemon=True).start()
+
+    def _on_bench(self, resultado: Any) -> None:
+        self.button_bench.configure(state="normal", text="Medir de novo")
+        venceu_placa = resultado.winner == "onnx"
+        self.bench_label.configure(
+            text=resultado.describe()
+            + ("\nA partir de agora os trabalhos usam a placa."
+               if venceu_placa
+               else "\nOs trabalhos continuam no processador."),
+            foreground=self.theme.success if venceu_placa else self.theme.ink_soft,
+        )
+        self._refresh_perf()
+
+    def _on_bench_error(self, mensagem: str) -> None:
+        self.button_bench.configure(state="normal", text="Medir a minha placa")
+        self.bench_label.configure(
+            text=f"Não consegui medir: {mensagem}", foreground=self.theme.accent_warm
+        )
+
     def _on_machine(self, check: MachineCheck) -> None:
         self.machine = check
+        self._refresh_bench_button()
         self._refresh_machine_summary()
         self._set_state("Pronto", self.theme.success)
         log.info("Avaliacao da maquina: %s (%s)", check.level, check.headline)
         if check.should_warn and not load_flag("skip_machine_warning"):
             self.show_machine_dialog(allow_quit=True)
+
+    def _refresh_bench_button(self) -> None:
+        """O botão de medir só existe onde há o que medir.
+
+        Máquina com NVIDIA funcionando, ou sem placa nenhuma, não tem escolha a
+        fazer — e um botão que não serve para nada é ruído na tela.
+        """
+        if not hasattr(self, "button_bench"):  # pragma: no cover - antes do layout
+            return
+        from . import gpu_bench
+
+        placa = self.machine.hardware.graphics if (self.machine and self.machine.hardware) else None
+        pronto, _motivo = onnx_engine.available()
+        cabe = (
+            placa is not None
+            and not placa.accelerates_transcription
+            and pronto
+            and onnx_engine.supported_model(self._selected(self.model_var, MODEL_LABELS))
+        )
+        if not cabe or placa is None:
+            self.button_bench.pack_forget()
+            self.bench_label.configure(text="")
+            return
+
+        self.button_bench.pack(side="left", padx=(10, 0))
+        medido = gpu_bench.load(placa.name, self._selected(self.model_var, MODEL_LABELS))
+        if medido is None:
+            self.bench_label.configure(
+                text=f"A sua {placa.name} pode transcrever, pelo DirectML. Se ela é "
+                     "mais rápida que o seu processador depende desta máquina — o "
+                     "botão acima mede os dois num trecho do seu arquivo e decide "
+                     "com base no resultado, não no chute.",
+                foreground=self.theme.ink_soft,
+            )
+        else:
+            self.button_bench.configure(text="Medir de novo")
+            self.bench_label.configure(
+                text=f"{medido.describe()}  (medido em {medido.measured_at})",
+                foreground=self.theme.ink_soft,
+            )
 
     def _refresh_machine_summary(self) -> None:
         """Escreve o veredito na página Desempenho."""

@@ -22,7 +22,7 @@ o contrário vai propor a solução errada.
 
 | | |
 |---|---|
-| Transcrição | faster-whisper (CTranslate2) — acelera só em **NVIDIA**; AMD e Intel rodam no processador |
+| Transcrição | faster-whisper (CTranslate2) em CPU/NVIDIA; ONNX Runtime + DirectML nas placas AMD/Intel, quando elas ganham a medição |
 | Leitura de mídia | ffmpeg / ffprobe, sempre por lista de argumentos, nunca por shell |
 | Quem fala | SpeechBrain ECAPA (sem token) ou pyannote (com token) |
 | Resumo opcional | Ollama local, `qwen3:14b` |
@@ -45,7 +45,9 @@ src/lauda/
   probe.py        metadados via ffprobe
   extract.py      audio -> WAV 16 kHz mono
   audio_stats.py  volume, clipping, silencio (e ONDE esta o silencio)
-  transcribe.py   faster-whisper
+  transcribe.py   faster-whisper (motor principal: CPU e NVIDIA)
+  onnx_engine.py  o segundo motor: DirectML, para AMD/Intel/integrada
+  gpu_bench.py    mede os dois na maquina do usuario e guarda quem ganhou
   align.py        encolhe bordas de segmento pelas palavras
   diarize.py      quem fala
   coverage.py     quanto da linha do tempo virou texto

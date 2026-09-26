@@ -292,6 +292,16 @@ def process_media(
                     processing.device_name = output.runtime.device_name
                     processing.compute_type = output.runtime.compute_type
                     partial_failures.extend(output.runtime.notes)
+                    # O segundo motor (placa não-NVIDIA) não marca o tempo de
+                    # cada palavra. Quem pediu isso precisa saber que não veio,
+                    # e por quê — sumir em silêncio é o que o BLOCO C existe
+                    # para não fazer.
+                    if output.runtime.engine == "onnx" and options.word_timestamps:
+                        partial_failures.append(
+                            "Tempo das palavras: o motor da placa de vídeo "
+                            "(DirectML) não o calcula. Para ter o BLOCO C, "
+                            "processe no processador."
+                        )
                 processing.engine_version = output.engine_version
                 processing.model_path = output.model_path
                 # O ponto mais importante de todos: daqui em diante, uma queda

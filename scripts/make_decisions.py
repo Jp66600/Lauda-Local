@@ -372,13 +372,54 @@ def build() -> Path:
             "delas pede conserto."
         ),
         Spacer(1, 2 * mm),
+        h("O segundo motor, e por que ele não é o padrão", "h2"),
+        para(
+            "Desde a 0.17.0-beta existe um segundo motor: <b>ONNX Runtime com "
+            "DirectML</b>, que fala com qualquer placa DirectX 12 — AMD, Intel e "
+            "integradas, do mesmo jeito. O whisper.cpp com Vulkan foi descartado "
+            "antes: o projeto não publica binário Vulkan para Windows x64, e compilar "
+            "um não cabe na história de instalação deste programa."
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "O motor novo <b>não</b> virou padrão, e essa é a decisão que interessa. "
+            "Medindo o mesmo áudio num Ryzen 5 5600X de 6 núcleos com uma RTX 4060 "
+            "pelo DirectML, o processador ganhou:"
+        ),
+        Spacer(1, 2 * mm),
+        grid(
+            ["Caminho", "20 s de áudio, modelo small", "x tempo real"],
+            [
+                ["<b>CTranslate2, processador</b>", "<b>2,4 s</b>", "<b>8,3x</b>"],
+                ["ONNX + DirectML, placa", "3,9 s", "5,1x"],
+            ],
+            widths=[62 * mm, 52 * mm, W - 114 * mm],
+            mono_columns=(),
+            strong_columns=(0,),
+        ),
+        Spacer(1, 2 * mm),
+        para(
+            "Num processador fraco com uma placa boa, a conta se inverte — um lado "
+            "escala com o processador e o outro com a placa. Eu não tenho as duas "
+            "máquinas, e uma regra fixa no código erraria metade das vezes, sempre em "
+            "silêncio. Então o programa mede: 20 segundos do arquivo do próprio "
+            "usuário, nos dois motores, com os modelos carregados <b>antes</b> do "
+            "cronômetro — carregar leva alguns segundos e enterraria a diferença, "
+            "sempre contra a placa. O resultado fica guardado por placa e por modelo."
+        ),
+        Spacer(1, 2 * mm),
         note(
-            "O que faltaria para acelerar em AMD",
-            "Um segundo motor de inferência: whisper.cpp (que tem Vulkan e ROCm) ou "
-            "ONNX Runtime com DirectML. Não é configuração, é outro modelo, outro "
-            "formato de arquivo e outro caminho de código para manter. Enquanto isso "
-            "não existir, dizer a verdade e tirar o melhor do processador é o melhor "
-            "que dá para fazer — e é o que o programa faz.",
+            "Três armadilhas do DirectML, pagas em depuração",
+            "<b>1.</b> O io binding é obrigatório: sem ele o DirectML não erra um "
+            "pouco, devolve lixo — “further donuts 행 Unf eran praw” no lugar de "
+            "português, com o mesmo arquivo e o mesmo áudio.  "
+            "<b>2.</b> Tensor de comprimento zero não pode ser alocado na placa: "
+            "criar um derruba o processo na hora, sem exceção e sem mensagem. O cache "
+            "vazio do primeiro passo nasce na CPU.  "
+            "<b>3.</b> O modelo é fp16, que dá o mesmo texto do fp32 e metade do "
+            "download. Os itens 1 e 2 são o motivo de o laço de decodificação ser do "
+            "optimum e não escrito à mão: a versão à mão acertava na CPU e morria com "
+            "segfault na placa.",
             AMBER,
         ),
         h("Núcleos físicos, não threads lógicas", "h2"),

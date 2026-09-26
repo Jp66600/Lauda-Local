@@ -44,7 +44,7 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 | Documento | Páginas | Para quem |
 |---|---|---|
 | [Guia rápido](docs/Lauda-Local-Guia-Rapido.pdf) | 4 | quem só quer transcrever um arquivo hoje |
-| [Manual completo](docs/Lauda-Local-Manual.pdf) | 19 | cada tela, cada opção e o que fazer quando dá errado |
+| [Manual completo](docs/Lauda-Local-Manual.pdf) | 20 | cada tela, cada opção e o que fazer quando dá errado |
 | [Decisões técnicas](docs/Lauda-Local-Decisoes-Tecnicas.pdf) | 17 | o porquê de cada escolha, as medições e os limites assumidos |
 | [Front-end](docs/Lauda-Local-Front-End.pdf) | 17 | como a interface foi construída e como pedir mudanças nela |
 
@@ -53,6 +53,13 @@ Todos gerados por script a partir do código, então não envelhecem sozinhos:
 ## O que há de novo
 
 A lista completa está no [CHANGELOG.md](CHANGELOG.md). Os destaques recentes:
+
+**0.17.0-beta**
+- **A placa AMD, Intel ou integrada agora transcreve**, por um segundo motor
+  (ONNX Runtime + DirectML). Quem decide se ela entra é uma **medição feita na
+  sua máquina**, não um palpite meu: o botão "Medir a minha placa", na página
+  Desempenho, roda os dois motores num trecho do seu arquivo e fica com o mais
+  rápido.
 
 **0.16.0-beta**
 - **O programa identifica o fabricante da placa de vídeo** — NVIDIA, AMD, Intel
@@ -726,18 +733,39 @@ Não existe ROCm, DirectML nem Metal nessa lista. Na prática:
 
 | A sua placa | Acelera? | O que o programa faz |
 |---|---|---|
-| **NVIDIA** com driver e cuDNN em dia | sim | usa a placa; é o caminho mais rápido |
+| **NVIDIA** com driver e cuDNN em dia | sim, pelo CUDA | usa a placa; é o caminho mais rápido de todos |
 | **NVIDIA** sem cuDNN / driver antigo | não, mas dá para consertar | avisa, diz o que falta e roda no processador |
-| **AMD** (Radeon, RX, APU) | não | reconhece a placa, avisa que ela não entra, e tira o melhor do processador |
-| **Intel** (UHD, Iris, Arc) | não | idem |
-| **Apple Silicon** | não | idem |
+| **AMD** (Radeon, RX, APU) | **sim, pelo DirectML** — se ela ganhar a medição | mede os dois motores na sua máquina e fica com o mais rápido |
+| **Intel** (UHD, Iris, Arc) | **sim, pelo DirectML** — idem | idem |
+| **Apple Silicon** | não | roda no processador |
 | nenhuma identificada | não | roda no processador |
+
+### Por que a sua placa precisa "ganhar uma medição"
+
+Porque a resposta muda de máquina para máquina, e eu não tenho a sua.
+
+O motor principal (**CTranslate2**) é muito bem otimizado no processador. O
+motor da placa (**ONNX Runtime + DirectML**) depende de uma camada de
+compatibilidade do Windows. Numa máquina medida aqui — um Ryzen 5 5600X de 6
+núcleos com uma RTX 4060 pelo DirectML — **o processador ganhou**: 8,3x contra
+5,1x tempo real. Num processador fraco com uma Radeon boa, a conta se inverte,
+porque um lado escala com o processador e o outro com a placa.
+
+Ligar a placa no escuro deixaria parte das pessoas mais lenta sem aviso. Então
+o programa não chuta: o botão **"Medir a minha placa"**, na página Desempenho,
+transcreve 20 segundos do **seu** arquivo nos dois motores e guarda quem
+ganhou — por placa e por modelo. Dali em diante, os trabalhos usam o vencedor.
+
+O que o motor da placa **não** faz: marcar o tempo de cada palavra (o BLOCO C
+do laudo). Quem pediu isso recebe o aviso no laudo, em vez de um bloco que
+some. Só os modelos com build ONNX publicado entram — `tiny`, `base`, `small`
+e `large-v3-turbo`; com `large-v3` ou `medium` o trabalho fica no processador.
 
 A página **Desempenho → Diagnóstico** diz em qual linha você está, pelo nome da
 sua placa. Ter uma Radeon **não** é defeito de instalação e não há driver
 faltando: só não existe o caminho.
 
-### Então o que dá para fazer numa máquina sem NVIDIA
+### E quando a placa perde a medição
 
 O que muda a velocidade é o processador, e o programa já o usa do melhor jeito:
 
@@ -751,12 +779,23 @@ O que muda a velocidade é o processador, e o programa já o usa do melhor jeito
 Se ainda estiver devagar, o que sobra é escolher um modelo menor na qualidade
 (`small` em vez de `large-v3`) — é o que mais muda o tempo.
 
-### E se um dia der para acelerar em AMD
+### Instalando o motor da placa a partir do código
 
-Precisaria de um **segundo motor de inferência**: `whisper.cpp` (que tem Vulkan
-e ROCm) ou ONNX Runtime com DirectML. Não é configuração — é outro modelo,
-outro formato de arquivo e outro caminho de código para manter. Se isso te
-interessa, [abra uma issue](https://github.com/Jp66600/Lauda-Local/issues).
+O instalador do Windows já vem com ele dentro. Quem roda do código precisa de
+um passo a mais, e nesta ordem:
+
+```bash
+pip install -r requirements.txt -r requirements-amd.txt
+```
+
+A ordem importa: o `onnxruntime-directml` ocupa a mesma pasta que o
+`onnxruntime` comum (que vem com o faster-whisper), e vale o último instalado.
+O pacote DirectML também traz o provedor de CPU, então nada se perde.
+
+**Conflito conhecido:** o `transformers` exige `huggingface-hub<1` e o `gradio`
+exige `>=1.16`. Instalando o motor da placa, a interface de navegador
+(`lauda ui`) pode parar de funcionar. A janela nativa, que é o produto, não é
+afetada — e o instalador do Windows nunca teve Gradio dentro.
 
 ---
 
