@@ -15,6 +15,8 @@ keywords = ["whisper", "transcription", "ffmpeg", "offline", "speech-to-text"]
 dependencies = [
     "faster-whisper>=1.2,<2",
     "ctranslate2>=4.5,<5",
+    # PyAV 19 quebra o decode_audio do faster-whisper 1.2 (metadata_errors).
+    "av>=11,<19",
     "huggingface-hub>=0.34,<2",
     "typer>=0.15,<1",
     "rich>=13,<16",
